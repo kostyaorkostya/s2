@@ -1,15 +1,38 @@
 use super::grid::*;
+use std::ops::{Index, IndexMut};
 use strum::EnumCount;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct PlainGrid([Option<GridValue>; IIdx::COUNT * JIdx::COUNT]);
 
-impl Grid for PlainGrid {
-    fn index(&self, idx: Idx) -> &Self::Output {
-        grid.0[Idx.to_row_major(idx)]
-    }
+impl Index<Idx> for PlainGrid {
+    type Output = Option<GridValue>;
 
+    fn index(&self, idx: Idx) -> &Self::Output {
+        &self.0[to_row_major(idx)]
+    }
+}
+
+impl IndexMut<Idx> for PlainGrid {
     fn index_mut(&mut self, idx: Idx) -> &mut Self::Output {
-        &mut grid.0[Idx.to_row_major(idx)]
+        &mut self.0[to_row_major(idx)]
+    }
+}
+
+impl std::fmt::Display for PlainGrid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        render(self, f)
+    }
+}
+
+impl Default for PlainGrid {
+    fn default() -> Self {
+        PlainGrid([None; IIdx::COUNT * JIdx::COUNT])
+    }
+}
+
+impl PlainGrid {
+    pub fn new() -> Self {
+        Default::default()
     }
 }

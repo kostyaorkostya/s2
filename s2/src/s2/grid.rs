@@ -1,28 +1,9 @@
 use std::convert::{Into, TryFrom};
-use std::fmt::Display;
-use std::ops::IndexMut;
-use strum::EnumCount;
+use std::ops::Index;
+use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 
-pub struct Idx((IIdx, JIdx));
-
-impl Idx {
-    pub fn to_row_major(&self) -> usize {
-        let i: usize = self.0.into();
-        let j: usize = self.1.into();
-        i * IIdx::COUNT + j
-    }
-
-    pub fn to_column_major(&self) -> usize {
-        let i: usize = self.0.into();
-        let j: usize = self.1.into();
-        j * JIdx::COUNT + i
-    }
-}
-
-pub trait Grid: IndexMut<Idx> + Display {}
-
-#[derive(Debug, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IIdx {
     I0,
     I1,
@@ -33,30 +14,6 @@ pub enum IIdx {
     I6,
     I7,
     I8,
-}
-
-impl Grid {
-    type Output = Option<GridValue>;
-
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for i in IIdx::iter() {
-            for j in JIdx::iter() {
-                let cell: char = match self[(i, j)] {
-                    None => ' ',
-                    Some(v) => v.into(),
-                };
-                write!(f, "{}", cell);
-                if j != JIdx::J8 {
-                    write!(f, "|");
-                }
-            }
-            if i != IIdx::I8 {
-                write!(f, "\n");
-                write!(f, "{}\n:", "_".repeat(JIdx::COUNT * 2 - 1));
-            }
-        }
-        Ok(())
-    }
 }
 
 impl TryFrom<usize> for IIdx {
@@ -94,7 +51,7 @@ impl Into<usize> for IIdx {
     }
 }
 
-#[derive(Debug, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
 pub enum JIdx {
     J0,
     J1,
@@ -142,7 +99,9 @@ impl Into<usize> for JIdx {
     }
 }
 
-#[derive(Debug, Default, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum GridValue {
     #[default]
     V0,
@@ -205,4 +164,38 @@ impl Into<char> for GridValue {
             GridValue::V8 => '8',
         }
     }
+}
+
+pub type Idx = (IIdx, JIdx);
+
+pub fn to_row_major(idx: Idx) -> usize {
+    let i: usize = idx.0.into();
+    let j: usize = idx.1.into();
+    i * IIdx::COUNT + j
+}
+
+pub fn to_column_major(idx: Idx) -> usize {
+    let i: usize = idx.0.into();
+    let j: usize = idx.1.into();
+    j * JIdx::COUNT + i
+}
+
+pub fn render<T>(grid: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+where
+    T: Index<Idx, Output = Option<GridValue>>,
+{
+    for i in IIdx::iter() {
+        for j in JIdx::iter() {
+            let cell: char = grid[(i, j)].map_or(' ', |x| x.into());
+            write!(f, "{}", cell)?;
+            if j != JIdx::J8 {
+                write!(f, "|")?;
+            }
+        }
+        if i != IIdx::I8 {
+            write!(f, "\n")?;
+            write!(f, "{}\n:", "_".repeat(JIdx::COUNT * 2 - 1))?;
+        }
+    }
+    Ok(())
 }

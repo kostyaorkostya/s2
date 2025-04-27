@@ -82,16 +82,15 @@ pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, ()>
 where
     T: Index<Idx, Output = Option<GridValue>>,
 {
-    Ok((true
-        && IIdx::iter()
-            .map(|i| {
-                zip(repeat(i), JIdx::iter())
-                    .map(|x| grid[x])
-                    .collect::<Counter>()
-                    .eval_status()
-                    .map(Into::into)
-            })
-            .try_fold(true, |acc, x| x.map(|x| acc && x))?
+    Ok((IIdx::iter()
+        .map(|i| {
+            zip(repeat(i), JIdx::iter())
+                .map(|x| grid[x])
+                .collect::<Counter>()
+                .eval_status()
+                .map(Into::into)
+        })
+        .try_fold(true, |acc, x| x.map(|x| acc && x))?
         && JIdx::iter()
             .map(|j| {
                 zip(IIdx::iter(), repeat(j))

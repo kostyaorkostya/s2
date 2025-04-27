@@ -1,10 +1,11 @@
 mod grid;
 mod plain_grid;
-mod rules;
+mod scan;
 
 pub use grid::GridValue;
 pub use grid::IIdx;
 pub use grid::Idx;
 pub use grid::JIdx;
 pub use plain_grid::PlainGrid;
-pub use rules::is_complete;
+pub use scan::eval_status;
+pub use scan::SudokuStatus;

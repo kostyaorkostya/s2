@@ -11,6 +11,6 @@ fn create_test_grid_1() -> PlainGrid {
 fn main() {
     let grid = create_test_grid_1();
     println!("{}", grid);
-    let is_complete = is_complete(&grid);
-    println!("{}", is_complete);
+    let status = eval_status(&grid);
+    println!("{:?}", status);
 }

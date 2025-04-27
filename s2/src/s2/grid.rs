@@ -104,7 +104,6 @@ impl Into<usize> for JIdx {
 )]
 pub enum GridValue {
     #[default]
-    V0,
     V1,
     V2,
     V3,
@@ -113,6 +112,7 @@ pub enum GridValue {
     V6,
     V7,
     V8,
+    V9,
 }
 
 impl TryFrom<usize> for GridValue {
@@ -120,7 +120,6 @@ impl TryFrom<usize> for GridValue {
 
     fn try_from(item: usize) -> Result<Self, Self::Error> {
         match item {
-            0 => Ok(GridValue::V0),
             1 => Ok(GridValue::V1),
             2 => Ok(GridValue::V2),
             3 => Ok(GridValue::V3),
@@ -129,6 +128,7 @@ impl TryFrom<usize> for GridValue {
             6 => Ok(GridValue::V6),
             7 => Ok(GridValue::V7),
             8 => Ok(GridValue::V8),
+            9 => Ok(GridValue::V9),
             _ => Err(()),
         }
     }
@@ -137,15 +137,15 @@ impl TryFrom<usize> for GridValue {
 impl Into<usize> for GridValue {
     fn into(self) -> usize {
         match self {
-            GridValue::V0 => 0,
-            GridValue::V1 => 1,
-            GridValue::V2 => 2,
-            GridValue::V3 => 3,
-            GridValue::V4 => 4,
-            GridValue::V5 => 5,
-            GridValue::V6 => 6,
-            GridValue::V7 => 7,
-            GridValue::V8 => 8,
+            GridValue::V1 => 0,
+            GridValue::V2 => 1,
+            GridValue::V3 => 2,
+            GridValue::V4 => 3,
+            GridValue::V5 => 4,
+            GridValue::V6 => 5,
+            GridValue::V7 => 6,
+            GridValue::V8 => 7,
+            GridValue::V9 => 8,
         }
     }
 }
@@ -153,7 +153,6 @@ impl Into<usize> for GridValue {
 impl Into<char> for GridValue {
     fn into(self) -> char {
         match self {
-            GridValue::V0 => '0',
             GridValue::V1 => '1',
             GridValue::V2 => '2',
             GridValue::V3 => '3',
@@ -162,6 +161,7 @@ impl Into<char> for GridValue {
             GridValue::V6 => '6',
             GridValue::V7 => '7',
             GridValue::V8 => '8',
+            GridValue::V9 => '9',
         }
     }
 }

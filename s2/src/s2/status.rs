@@ -80,7 +80,7 @@ impl Counter {
 
 pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, ()>
 where
-    T: Index<Idx, Output = Option<GridValue>>,
+    T: Index<GridIdx, Output = Option<GridValue>>,
 {
     Ok((IIdx::iter()
         .map(|i| {

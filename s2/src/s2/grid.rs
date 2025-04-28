@@ -1,5 +1,6 @@
 use std::convert::{Into, TryFrom};
-use std::ops::Index;
+use std::iter::zip;
+use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 
@@ -166,15 +167,15 @@ impl Into<char> for GridValue {
     }
 }
 
-pub type Idx = (IIdx, JIdx);
+pub type GridIdx = (IIdx, JIdx);
 
-pub fn to_row_major(idx: Idx) -> usize {
+pub fn to_row_major(idx: GridIdx) -> usize {
     let i: usize = idx.0.into();
     let j: usize = idx.1.into();
     i * IIdx::COUNT + j
 }
 
-pub fn to_column_major(idx: Idx) -> usize {
+pub fn to_column_major(idx: GridIdx) -> usize {
     let i: usize = idx.0.into();
     let j: usize = idx.1.into();
     j * JIdx::COUNT + i
@@ -182,7 +183,7 @@ pub fn to_column_major(idx: Idx) -> usize {
 
 pub fn render<T>(grid: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
 where
-    T: Index<Idx, Output = Option<GridValue>>,
+    T: Index<GridIdx, Output = Option<GridValue>>,
 {
     for i in IIdx::iter() {
         for j in JIdx::iter() {
@@ -198,4 +199,22 @@ where
         }
     }
     Ok(())
+}
+
+pub fn copy<GridSrc, GridDst>(src: &GridSrc, dst: &mut GridDst) -> ()
+where
+    GridSrc: Index<GridIdx, Output = Option<GridValue>>,
+    GridDst: IndexMut<GridIdx, Output = Option<GridValue>>,
+{
+    zip(IIdx::iter(), JIdx::iter()).for_each(|idx| dst[idx] = src[idx]);
+}
+
+pub fn copy_into<GridSrc, GridDst>(src: &GridSrc) -> GridDst
+where
+    GridSrc: Index<GridIdx, Output = Option<GridValue>>,
+    GridDst: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
+{
+    let mut dst = GridDst::default();
+    copy(src, &mut dst);
+    dst
 }

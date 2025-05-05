@@ -1,4 +1,5 @@
 use super::grid::*;
+use itertools::Itertools;
 use std::iter::{repeat, zip};
 use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
@@ -100,9 +101,11 @@ where
                     .map(Into::into)
             })
             .try_fold(true, |acc, x| x.map(|x| acc && x))?
-        && zip(0..3, 0..3)
+        && (0..3)
+            .cartesian_product(0..3)
             .map(|(i_subgrid, j_subgrid)| {
-                zip(0..3, 0..3)
+                (0..3)
+                    .cartesian_product(0..3)
                     .map(|(i_in_subgrid, j_in_subgrid)| {
                         (
                             (i_subgrid * 3 + i_in_subgrid).try_into().unwrap(),

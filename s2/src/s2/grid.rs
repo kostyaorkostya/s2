@@ -1,5 +1,5 @@
+use itertools::Itertools;
 use std::convert::{Into, TryFrom};
-use std::iter::zip;
 use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
@@ -206,7 +206,9 @@ where
     GridSrc: Index<GridIdx, Output = Option<GridValue>>,
     GridDst: IndexMut<GridIdx, Output = Option<GridValue>>,
 {
-    zip(IIdx::iter(), JIdx::iter()).for_each(|idx| dst[idx] = src[idx]);
+    IIdx::iter()
+        .cartesian_product(JIdx::iter())
+        .for_each(|idx| dst[idx] = src[idx]);
 }
 
 pub fn copy_into<GridSrc, GridDst>(src: &GridSrc) -> GridDst
@@ -216,5 +218,25 @@ where
 {
     let mut dst = GridDst::default();
     copy(src, &mut dst);
+    dst
+}
+
+pub fn apply<Grid, Placement>(grid: &mut Grid, placement: Placement) -> ()
+where
+    Grid: IndexMut<GridIdx, Output = Option<GridValue>>,
+    Placement: Iterator<Item = (GridIdx, GridValue)>,
+{
+    placement.for_each(|(idx, value)| grid[idx] = Some(value))
+}
+
+pub fn copy_and_apply<GridSrc, GridDst, Placement>(src: &GridSrc, placement: Placement) -> GridDst
+where
+    GridSrc: Index<GridIdx, Output = Option<GridValue>>,
+    GridDst: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
+    Placement: Iterator<Item = (GridIdx, GridValue)>,
+{
+    let mut dst = GridDst::default();
+    copy(src, &mut dst);
+    apply(&mut dst, placement);
     dst
 }

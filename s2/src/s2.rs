@@ -4,7 +4,9 @@ mod plain_grid;
 mod solver;
 mod status;
 
+pub use grid::apply;
 pub use grid::copy;
+pub use grid::copy_and_apply;
 pub use grid::copy_into;
 pub use grid::render;
 pub use grid::GridIdx;

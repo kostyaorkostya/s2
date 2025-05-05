@@ -194,7 +194,7 @@ where
             }
         }
         if i != IIdx::I8 {
-            writeln!(f, "")?;
+            writeln!(f)?;
             writeln!(f, "{}", "_".repeat(JIdx::COUNT * 2 - 1))?;
         }
     }

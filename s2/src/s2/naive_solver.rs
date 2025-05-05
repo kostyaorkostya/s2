@@ -9,51 +9,44 @@ use strum::IntoEnumIterator;
 #[derive(Debug, Default)]
 pub struct NaiveSolver {}
 
+fn solve_rec<I>(cur: &mut PlainGrid, mut iter: I, none_values: usize) -> Result<SudokuStatus, ()>
+where
+    I: Iterator<Item = GridIdx> + Clone,
+{
+    let none_values = if none_values == 0 {
+        return Err(());
+    } else {
+        none_values - 1
+    };
+
+    let idx = match iter.find(|idx| cur[*idx].is_none()) {
+        None => {
+            unreachable!("Assuming sudoku grid was valid and incomplete we'll never hit this case")
+        }
+        Some(idx) => idx,
+    };
+    for value in GridValue::iter() {
+        cur[idx] = Some(value);
+        match eval_status(cur) {
+            Err(()) => continue,
+            x @ Ok(SudokuStatus::Complete) => return x,
+            Ok(SudokuStatus::Incomplete) => match solve_rec(cur, iter.clone(), none_values) {
+                Ok(SudokuStatus::Incomplete) => {
+                    unreachable!("If [Ok], can only be [Complete]")
+                }
+                Err(()) => continue,
+                x @ Ok(SudokuStatus::Complete) => return x,
+            },
+        }
+    }
+
+    cur[idx] = None;
+    Err(())
+}
+
 impl NaiveSolver {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    fn solve_rec<I>(
-        &self,
-        cur: &mut PlainGrid,
-        mut iter: I,
-        none_values: usize,
-    ) -> Result<SudokuStatus, ()>
-    where
-        I: Iterator<Item = GridIdx> + Clone,
-    {
-        let none_values = if none_values == 0 {
-            return Err(());
-        } else {
-            none_values - 1
-        };
-
-        let idx = match iter.find(|idx| cur[*idx].is_none()) {
-            None => unreachable!(
-                "Assuming sudoku grid was valid and incomplete we'll never hit this case"
-            ),
-            Some(idx) => idx,
-        };
-        for value in GridValue::iter() {
-            cur[idx] = Some(value);
-            match eval_status(cur) {
-                Err(()) => continue,
-                x @ Ok(SudokuStatus::Complete) => return x,
-                Ok(SudokuStatus::Incomplete) => {
-                    match self.solve_rec(cur, iter.clone(), none_values) {
-                        Ok(SudokuStatus::Incomplete) => {
-                            unreachable!("If [Ok], can only be [Complete]")
-                        }
-                        Err(()) => continue,
-                        x @ Ok(SudokuStatus::Complete) => return x,
-                    }
-                }
-            }
-        }
-
-        cur[idx] = None;
-        Err(())
     }
 }
 
@@ -65,7 +58,7 @@ impl Solver for NaiveSolver {
     {
         let mut cur = PlainGrid::new();
         copy(grid, &mut cur);
-        match self.solve_rec(
+        match solve_rec(
             &mut cur,
             IIdx::iter().cartesian_product(JIdx::iter()),
             IIdx::iter()

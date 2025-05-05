@@ -20,8 +20,8 @@ pub enum IIdx {
 impl TryFrom<usize> for IIdx {
     type Error = ();
 
-    fn try_from(item: usize) -> Result<Self, Self::Error> {
-        match item {
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
             0 => Ok(Self::I0),
             1 => Ok(Self::I1),
             2 => Ok(Self::I2),
@@ -36,18 +36,18 @@ impl TryFrom<usize> for IIdx {
     }
 }
 
-impl Into<usize> for IIdx {
-    fn into(self) -> usize {
-        match self {
-            Self::I0 => 0,
-            Self::I1 => 1,
-            Self::I2 => 2,
-            Self::I3 => 3,
-            Self::I4 => 4,
-            Self::I5 => 5,
-            Self::I6 => 6,
-            Self::I7 => 7,
-            Self::I8 => 8,
+impl From<IIdx> for usize {
+    fn from(value: IIdx) -> usize {
+        match value {
+            IIdx::I0 => 0,
+            IIdx::I1 => 1,
+            IIdx::I2 => 2,
+            IIdx::I3 => 3,
+            IIdx::I4 => 4,
+            IIdx::I5 => 5,
+            IIdx::I6 => 6,
+            IIdx::I7 => 7,
+            IIdx::I8 => 8,
         }
     }
 }
@@ -84,18 +84,18 @@ impl TryFrom<usize> for JIdx {
     }
 }
 
-impl Into<usize> for JIdx {
-    fn into(self) -> usize {
-        match self {
-            Self::J0 => 0,
-            Self::J1 => 1,
-            Self::J2 => 2,
-            Self::J3 => 3,
-            Self::J4 => 4,
-            Self::J5 => 5,
-            Self::J6 => 6,
-            Self::J7 => 7,
-            Self::J8 => 8,
+impl From<JIdx> for usize {
+    fn from(value: JIdx) -> usize {
+        match value {
+            JIdx::J0 => 0,
+            JIdx::J1 => 1,
+            JIdx::J2 => 2,
+            JIdx::J3 => 3,
+            JIdx::J4 => 4,
+            JIdx::J5 => 5,
+            JIdx::J6 => 6,
+            JIdx::J7 => 7,
+            JIdx::J8 => 8,
         }
     }
 }
@@ -135,34 +135,34 @@ impl TryFrom<usize> for GridValue {
     }
 }
 
-impl Into<usize> for GridValue {
-    fn into(self) -> usize {
-        match self {
-            Self::V1 => 0,
-            Self::V2 => 1,
-            Self::V3 => 2,
-            Self::V4 => 3,
-            Self::V5 => 4,
-            Self::V6 => 5,
-            Self::V7 => 6,
-            Self::V8 => 7,
-            Self::V9 => 8,
+impl From<GridValue> for usize {
+    fn from(value: GridValue) -> usize {
+        match value {
+            GridValue::V1 => 0,
+            GridValue::V2 => 1,
+            GridValue::V3 => 2,
+            GridValue::V4 => 3,
+            GridValue::V5 => 4,
+            GridValue::V6 => 5,
+            GridValue::V7 => 6,
+            GridValue::V8 => 7,
+            GridValue::V9 => 8,
         }
     }
 }
 
-impl Into<char> for GridValue {
-    fn into(self) -> char {
-        match self {
-            Self::V1 => '1',
-            Self::V2 => '2',
-            Self::V3 => '3',
-            Self::V4 => '4',
-            Self::V5 => '5',
-            Self::V6 => '6',
-            Self::V7 => '7',
-            Self::V8 => '8',
-            Self::V9 => '9',
+impl From<GridValue> for char {
+    fn from(value: GridValue) -> char {
+        match value {
+            GridValue::V1 => '1',
+            GridValue::V2 => '2',
+            GridValue::V3 => '3',
+            GridValue::V4 => '4',
+            GridValue::V5 => '5',
+            GridValue::V6 => '6',
+            GridValue::V7 => '7',
+            GridValue::V8 => '8',
+            GridValue::V9 => '9',
         }
     }
 }

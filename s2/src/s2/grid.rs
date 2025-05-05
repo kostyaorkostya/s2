@@ -22,15 +22,15 @@ impl TryFrom<usize> for IIdx {
 
     fn try_from(item: usize) -> Result<Self, Self::Error> {
         match item {
-            0 => Ok(IIdx::I0),
-            1 => Ok(IIdx::I1),
-            2 => Ok(IIdx::I2),
-            3 => Ok(IIdx::I3),
-            4 => Ok(IIdx::I4),
-            5 => Ok(IIdx::I5),
-            6 => Ok(IIdx::I6),
-            7 => Ok(IIdx::I7),
-            8 => Ok(IIdx::I8),
+            0 => Ok(Self::I0),
+            1 => Ok(Self::I1),
+            2 => Ok(Self::I2),
+            3 => Ok(Self::I3),
+            4 => Ok(Self::I4),
+            5 => Ok(Self::I5),
+            6 => Ok(Self::I6),
+            7 => Ok(Self::I7),
+            8 => Ok(Self::I8),
             _ => Err(()),
         }
     }
@@ -39,15 +39,15 @@ impl TryFrom<usize> for IIdx {
 impl Into<usize> for IIdx {
     fn into(self) -> usize {
         match self {
-            IIdx::I0 => 0,
-            IIdx::I1 => 1,
-            IIdx::I2 => 2,
-            IIdx::I3 => 3,
-            IIdx::I4 => 4,
-            IIdx::I5 => 5,
-            IIdx::I6 => 6,
-            IIdx::I7 => 7,
-            IIdx::I8 => 8,
+            Self::I0 => 0,
+            Self::I1 => 1,
+            Self::I2 => 2,
+            Self::I3 => 3,
+            Self::I4 => 4,
+            Self::I5 => 5,
+            Self::I6 => 6,
+            Self::I7 => 7,
+            Self::I8 => 8,
         }
     }
 }
@@ -70,15 +70,15 @@ impl TryFrom<usize> for JIdx {
 
     fn try_from(item: usize) -> Result<Self, Self::Error> {
         match item {
-            0 => Ok(JIdx::J0),
-            1 => Ok(JIdx::J1),
-            2 => Ok(JIdx::J2),
-            3 => Ok(JIdx::J3),
-            4 => Ok(JIdx::J4),
-            5 => Ok(JIdx::J5),
-            6 => Ok(JIdx::J6),
-            7 => Ok(JIdx::J7),
-            8 => Ok(JIdx::J8),
+            0 => Ok(Self::J0),
+            1 => Ok(Self::J1),
+            2 => Ok(Self::J2),
+            3 => Ok(Self::J3),
+            4 => Ok(Self::J4),
+            5 => Ok(Self::J5),
+            6 => Ok(Self::J6),
+            7 => Ok(Self::J7),
+            8 => Ok(Self::J8),
             _ => Err(()),
         }
     }
@@ -87,15 +87,15 @@ impl TryFrom<usize> for JIdx {
 impl Into<usize> for JIdx {
     fn into(self) -> usize {
         match self {
-            JIdx::J0 => 0,
-            JIdx::J1 => 1,
-            JIdx::J2 => 2,
-            JIdx::J3 => 3,
-            JIdx::J4 => 4,
-            JIdx::J5 => 5,
-            JIdx::J6 => 6,
-            JIdx::J7 => 7,
-            JIdx::J8 => 8,
+            Self::J0 => 0,
+            Self::J1 => 1,
+            Self::J2 => 2,
+            Self::J3 => 3,
+            Self::J4 => 4,
+            Self::J5 => 5,
+            Self::J6 => 6,
+            Self::J7 => 7,
+            Self::J8 => 8,
         }
     }
 }
@@ -121,15 +121,15 @@ impl TryFrom<usize> for GridValue {
 
     fn try_from(item: usize) -> Result<Self, Self::Error> {
         match item {
-            1 => Ok(GridValue::V1),
-            2 => Ok(GridValue::V2),
-            3 => Ok(GridValue::V3),
-            4 => Ok(GridValue::V4),
-            5 => Ok(GridValue::V5),
-            6 => Ok(GridValue::V6),
-            7 => Ok(GridValue::V7),
-            8 => Ok(GridValue::V8),
-            9 => Ok(GridValue::V9),
+            1 => Ok(Self::V1),
+            2 => Ok(Self::V2),
+            3 => Ok(Self::V3),
+            4 => Ok(Self::V4),
+            5 => Ok(Self::V5),
+            6 => Ok(Self::V6),
+            7 => Ok(Self::V7),
+            8 => Ok(Self::V8),
+            9 => Ok(Self::V9),
             _ => Err(()),
         }
     }
@@ -138,15 +138,15 @@ impl TryFrom<usize> for GridValue {
 impl Into<usize> for GridValue {
     fn into(self) -> usize {
         match self {
-            GridValue::V1 => 0,
-            GridValue::V2 => 1,
-            GridValue::V3 => 2,
-            GridValue::V4 => 3,
-            GridValue::V5 => 4,
-            GridValue::V6 => 5,
-            GridValue::V7 => 6,
-            GridValue::V8 => 7,
-            GridValue::V9 => 8,
+            Self::V1 => 0,
+            Self::V2 => 1,
+            Self::V3 => 2,
+            Self::V4 => 3,
+            Self::V5 => 4,
+            Self::V6 => 5,
+            Self::V7 => 6,
+            Self::V8 => 7,
+            Self::V9 => 8,
         }
     }
 }
@@ -154,15 +154,15 @@ impl Into<usize> for GridValue {
 impl Into<char> for GridValue {
     fn into(self) -> char {
         match self {
-            GridValue::V1 => '1',
-            GridValue::V2 => '2',
-            GridValue::V3 => '3',
-            GridValue::V4 => '4',
-            GridValue::V5 => '5',
-            GridValue::V6 => '6',
-            GridValue::V7 => '7',
-            GridValue::V8 => '8',
-            GridValue::V9 => '9',
+            Self::V1 => '1',
+            Self::V2 => '2',
+            Self::V3 => '3',
+            Self::V4 => '4',
+            Self::V5 => '5',
+            Self::V6 => '6',
+            Self::V7 => '7',
+            Self::V8 => '8',
+            Self::V9 => '9',
         }
     }
 }
@@ -194,14 +194,14 @@ where
             }
         }
         if i != IIdx::I8 {
-            write!(f, "\n")?;
-            write!(f, "{}\n:", "_".repeat(JIdx::COUNT * 2 - 1))?;
+            writeln!(f, "")?;
+            writeln!(f, "{}", "_".repeat(JIdx::COUNT * 2 - 1))?;
         }
     }
     Ok(())
 }
 
-pub fn copy<GridSrc, GridDst>(src: &GridSrc, dst: &mut GridDst) -> ()
+pub fn copy<GridSrc, GridDst>(src: &GridSrc, dst: &mut GridDst)
 where
     GridSrc: Index<GridIdx, Output = Option<GridValue>>,
     GridDst: IndexMut<GridIdx, Output = Option<GridValue>>,
@@ -221,7 +221,7 @@ where
     dst
 }
 
-pub fn apply<Grid, Placement>(grid: &mut Grid, placement: Placement) -> ()
+pub fn apply<Grid, Placement>(grid: &mut Grid, placement: Placement)
 where
     Grid: IndexMut<GridIdx, Output = Option<GridValue>>,
     Placement: Iterator<Item = (GridIdx, GridValue)>,

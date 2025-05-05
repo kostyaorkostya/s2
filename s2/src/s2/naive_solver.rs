@@ -29,7 +29,7 @@ impl NaiveSolver {
             none_values - 1
         };
 
-        let idx = match iter.find(|idx| cur[idx.clone()].is_none()) {
+        let idx = match iter.find(|idx| cur[*idx].is_none()) {
             None => unreachable!(
                 "Assuming sudoku grid was valid and incomplete we'll never hit this case"
             ),
@@ -70,7 +70,7 @@ impl Solver for NaiveSolver {
             IIdx::iter().cartesian_product(JIdx::iter()),
             IIdx::iter()
                 .cartesian_product(JIdx::iter())
-                .filter(|idx| grid[idx.clone()].is_none())
+                .filter(|idx| grid[*idx].is_none())
                 .count(),
         ) {
             Ok(SudokuStatus::Complete) => (),
@@ -80,7 +80,7 @@ impl Solver for NaiveSolver {
         }
         IIdx::iter()
             .cartesian_product(JIdx::iter())
-            .filter(|idx| grid[idx.clone()].is_none())
+            .filter(|idx| grid[*idx].is_none())
             .map(|idx| (idx, cur[idx].unwrap()))
             .collect::<Placement>()
     }

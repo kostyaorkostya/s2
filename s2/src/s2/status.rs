@@ -12,21 +12,20 @@ pub enum SudokuStatus {
     Complete,
 }
 
-impl From<bool> for SudokuStatus {
-    fn from(value: bool) -> Self {
-        if value {
-            Self::Complete
-        } else {
-            Self::Incomplete
+impl From<SudokuStatus> for bool {
+    fn from(value: SudokuStatus) -> Self {
+        match value {
+            SudokuStatus::Incomplete => false,
+            SudokuStatus::Complete => true,
         }
     }
 }
 
-impl Into<bool> for SudokuStatus {
-    fn into(self) -> bool {
-        match self {
-            Self::Incomplete => false,
-            Self::Complete => true,
+impl From<bool> for SudokuStatus {
+    fn from(value: bool) -> Self {
+        match value {
+            false => Self::Incomplete,
+            true => Self::Complete,
         }
     }
 }

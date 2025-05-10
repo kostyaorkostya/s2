@@ -126,7 +126,7 @@ fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
         }
     }
 
-    unreachable!("Assuming sudoku grid was valid always find a solution")
+    return false;
 }
 
 impl GreedySolver {

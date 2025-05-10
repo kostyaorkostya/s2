@@ -43,7 +43,7 @@ fn main() {
     println!("{:?}", eval_status(&grid));
     let complete = copy_and_apply::<_, PlainGrid, _>(
         &grid,
-        NaiveSolver::new().solve::<_, Vec<_>>(&grid).into_iter(),
+        GreedySolver::new().solve::<_, Vec<_>>(&grid).into_iter(),
     );
     println!("{:?}", eval_status(&complete));
     println!("{}", complete);

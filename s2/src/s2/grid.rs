@@ -151,19 +151,20 @@ impl From<GridValue> for usize {
     }
 }
 
-impl From<GridValue> for char {
-    fn from(value: GridValue) -> char {
-        match value {
-            GridValue::V1 => '1',
-            GridValue::V2 => '2',
-            GridValue::V3 => '3',
-            GridValue::V4 => '4',
-            GridValue::V5 => '5',
-            GridValue::V6 => '6',
-            GridValue::V7 => '7',
-            GridValue::V8 => '8',
-            GridValue::V9 => '9',
-        }
+impl std::fmt::Display for GridValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x: char = match self {
+            Self::V1 => '1',
+            Self::V2 => '2',
+            Self::V3 => '3',
+            Self::V4 => '4',
+            Self::V5 => '5',
+            Self::V6 => '6',
+            Self::V7 => '7',
+            Self::V8 => '8',
+            Self::V9 => '9',
+        };
+        write!(f, "{}", x)
     }
 }
 
@@ -187,8 +188,10 @@ where
 {
     for i in IIdx::iter() {
         for j in JIdx::iter() {
-            let cell: char = grid[(i, j)].map_or(' ', |x| x.into());
-            write!(f, "{}", cell)?;
+            match grid[(i, j)] {
+                Some(x) => write!(f, "{}", x),
+                None => write!(f, " "),
+            }?;
             if j != JIdx::J8 {
                 write!(f, "|")?;
             }

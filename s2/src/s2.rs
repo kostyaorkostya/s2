@@ -1,6 +1,6 @@
+mod format;
 mod greedy_solver;
 mod grid;
-mod parse;
 mod plain_grid;
 mod solver;
 mod status;

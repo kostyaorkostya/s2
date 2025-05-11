@@ -45,14 +45,21 @@ impl std::fmt::Debug for PlainGrid {
     }
 }
 
-impl Default for PlainGrid {
-    fn default() -> Self {
-        PlainGrid([None; IIdx::COUNT * JIdx::COUNT])
+impl PlainGrid {
+    pub fn new<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        let mut res = PlainGrid([None; IIdx::COUNT * JIdx::COUNT]);
+        for (idx, value) in iter {
+            res[idx] = Some(value)
+        }
+        res
     }
 }
 
-impl PlainGrid {
-    pub fn new() -> Self {
-        Default::default()
+impl Default for PlainGrid {
+    fn default() -> Self {
+        Self::new(std::iter::empty())
     }
 }

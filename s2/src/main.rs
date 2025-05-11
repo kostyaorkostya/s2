@@ -15,7 +15,7 @@ ___419__5
 ____8__79
 "#
     .trim();
-    read_from_string(&RowMajorAscii::default(), &grid).unwrap()
+    read_from_string(&RowMajorAscii::default(), grid).unwrap()
 }
 
 fn main() {

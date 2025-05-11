@@ -93,7 +93,7 @@ impl ReadFormatter for RowMajorAscii {
         let mut state = RowMajorAsciiReadState::new(self);
         let is_cell = |c: u8| c.is_ascii_digit() && c != b'0';
         let is_empty = |c: u8| c == self.empty_cell;
-        let is_row_sep = |c: u8| self.row_sep.map_or(false, |x| x == c);
+        let is_row_sep = |c: u8| self.row_sep == Some(c);
         loop {
             let idx = of_row_major(state.row_major_idx);
             let mut c = 0;
@@ -233,16 +233,16 @@ _________
 _________
 "#
         .trim();
-        let f = RowMajorAscii::new(None, None);
-        let grid = PlainGrid::new();
+        let f = RowMajorAscii::default();
+        let grid = PlainGrid::default();
         let actual = write_string(&f, &grid);
         assert_eq!(&expected, &actual);
     }
 
     #[test]
     fn test_empty_grid_roundtrip() {
-        let f = RowMajorAscii::new(None, None);
-        let src = PlainGrid::new();
+        let f = RowMajorAscii::default();
+        let src = PlainGrid::default();
         let dst: PlainGrid = grid_roundtrip(&f, &src);
         assert_eq!(&src, &dst);
     }
@@ -261,7 +261,7 @@ ___419__5
 ____8__79
 "#
         .trim();
-        let f = RowMajorAscii::new(None, None);
+        let f = RowMajorAscii::default();
         let actual = str_roundtrip(&f, &expected);
         assert_eq!(&expected, &actual);
     }

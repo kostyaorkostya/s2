@@ -176,10 +176,26 @@ pub fn to_row_major(idx: GridIdx) -> usize {
     i * IIdx::COUNT + j
 }
 
-pub fn to_column_major(idx: GridIdx) -> usize {
+pub fn try_of_row_major(idx: usize) -> Result<GridIdx, ()> {
+    let i: IIdx = (idx / IIdx::COUNT).try_into()?;
+    let j: JIdx = (idx % JIdx::COUNT).try_into()?;
+    Ok((i, j))
+}
+
+pub fn of_row_major(idx: usize) -> GridIdx {
+    try_of_row_major(idx).unwrap()
+}
+
+pub fn to_col_major(idx: GridIdx) -> usize {
     let i: usize = idx.0.into();
     let j: usize = idx.1.into();
     j * JIdx::COUNT + i
+}
+
+pub fn try_of_col_major(idx: usize) -> Result<GridIdx, ()> {
+    let j: JIdx = (idx / JIdx::COUNT).try_into()?;
+    let i: IIdx = (idx % IIdx::COUNT).try_into()?;
+    Ok((i, j))
 }
 
 pub fn render<T>(grid: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result

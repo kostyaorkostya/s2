@@ -8,11 +8,24 @@ use strum::{EnumCount, IntoEnumIterator};
 pub trait ReadFormatter {
     type ReadError;
 
-    // TODO(kostya): better error type
     fn read<R, G>(&self, reader: &mut R, grid: &mut G) -> Result<(), Self::ReadError>
     where
         R: Read,
         G: IndexMut<GridIdx, Output = Option<GridValue>>;
+
+    fn read_from_bytes<F, G>(&self, b: &[u8], grid: &mut G) -> Result<(), Self::ReadError>
+    where
+        G: IndexMut<GridIdx, Output = Option<GridValue>>,
+    {
+        self.read(&mut Cursor::new(b), grid)
+    }
+
+    fn read_from_string<F, G>(&self, s: &str, grid: &mut G) -> Result<(), Self::ReadError>
+    where
+        G: IndexMut<GridIdx, Output = Option<GridValue>>,
+    {
+        self.read_from_bytes::<F, G>(s.as_bytes(), grid)
+    }
 }
 
 pub trait WriteFormatter {
@@ -69,6 +82,7 @@ impl<'a> RowMajorAsciiReadState<'a> {
 }
 
 impl ReadFormatter for RowMajorAscii {
+    // TODO(kostya): better error type
     type ReadError = ();
 
     fn read<R, G>(&self, reader: &mut R, grid: &mut G) -> Result<(), Self::ReadError>
@@ -128,7 +142,7 @@ impl WriteFormatter for RowMajorAscii {
             .cartesian_product(JIdx::iter())
             .try_fold(0, |res, idx| {
                 let cell = grid[idx]
-                    .map(|x| (b'0' + u8::try_from(usize::from(x)).unwrap()))
+                    .map(|x| (b'1' + u8::try_from(usize::from(x)).unwrap()))
                     .unwrap_or(self.empty_cell);
                 let cell = writer.write(slice::from_ref(&cell))?;
                 let row_sep = if idx.0 != IIdx::I8 && idx.1 == JIdx::J8 {
@@ -160,22 +174,13 @@ impl RowMajorAscii {
     }
 }
 
-pub fn read_from_string_into<F, G>(f: &F, s: &str, grid: &mut G) -> Result<(), F::ReadError>
-where
-    F: ReadFormatter,
-    G: IndexMut<GridIdx, Output = Option<GridValue>>,
-{
-    let mut cursor = Cursor::new(s.as_bytes());
-    f.read(&mut cursor, grid)
-}
-
 pub fn read_from_string<F, G>(f: &F, s: &str) -> Result<G, F::ReadError>
 where
     F: ReadFormatter,
     G: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
 {
     let mut grid = G::default();
-    read_from_string_into(f, s, &mut grid)?;
+    f.read_from_string::<F, G>(s, &mut grid)?;
     Ok(grid)
 }
 
@@ -192,34 +197,12 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod row_major_ascii_test {
     use super::super::PlainGrid;
     use super::write_string;
     use super::*;
 
-    #[test]
-    fn test_string_of_empty_grid() {
-        let f = RowMajorAscii::new(None, None);
-        let grid = PlainGrid::new();
-        let s = write_string(&f, &grid);
-        assert_eq!(
-            &s,
-            r#"
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-"#
-            .trim()
-        );
-    }
-
-    fn roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
+    fn grid_roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
     where
         F: WriteFormatter + ReadFormatter,
         F::ReadError: std::fmt::Debug,
@@ -230,11 +213,59 @@ _________
         read_from_string(f, &s).unwrap()
     }
 
+    fn str_roundtrip<F>(f: &F, s: &str) -> String
+    where
+        F: WriteFormatter + ReadFormatter,
+        F::ReadError: std::fmt::Debug,
+    {
+        let s: PlainGrid = read_from_string(f, s).unwrap();
+        write_string(f, &s)
+    }
+
+    #[test]
+    fn test_string_of_empty_grid() {
+        let expected = r#"
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+"#
+        .trim();
+        let f = RowMajorAscii::new(None, None);
+        let grid = PlainGrid::new();
+        let actual = write_string(&f, &grid);
+        assert_eq!(&expected, &actual);
+    }
+
     #[test]
     fn test_empty_grid_roundtrip() {
         let f = RowMajorAscii::new(None, None);
         let src = PlainGrid::new();
-        let dst: PlainGrid = roundtrip(&f, &src);
+        let dst: PlainGrid = grid_roundtrip(&f, &src);
         assert_eq!(&src, &dst);
+    }
+
+    #[test]
+    fn test_non_empty() {
+        let expected = r#"
+53__7____
+6__195___
+_98____6_
+8___6___3
+4__8_3__1
+7___2___6
+_6____28_
+___419__5
+____8__79
+"#
+        .trim();
+        let f = RowMajorAscii::new(None, None);
+        let actual = str_roundtrip(&f, &expected);
+        assert_eq!(&expected, &actual);
     }
 }

@@ -1,4 +1,5 @@
 use super::grid::{render, to_row_major, GridIdx, GridValue, IIdx, JIdx};
+use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 use strum::EnumCount;
 
@@ -10,6 +11,24 @@ impl Index<GridIdx> for PlainGrid {
 
     fn index(&self, idx: GridIdx) -> &Self::Output {
         &self.0[to_row_major(idx)]
+    }
+}
+
+impl<T> PartialEq<T> for PlainGrid
+where
+    T: Index<GridIdx, Output = Option<GridValue>>,
+{
+    fn eq(&self, other: &T) -> bool {
+        super::grid::eq(self, other)
+    }
+}
+
+impl<T> PartialOrd<T> for PlainGrid
+where
+    T: Index<GridIdx, Output = Option<GridValue>>,
+{
+    fn partial_cmp(&self, other: &T) -> Option<Ordering> {
+        super::grid::partial_cmp(self, other)
     }
 }
 

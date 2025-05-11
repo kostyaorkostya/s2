@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use std::cmp::Ordering;
 use std::convert::{Into, TryFrom};
 use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
@@ -258,4 +259,32 @@ where
     copy(src, &mut dst);
     apply(&mut dst, placement);
     dst
+}
+
+pub fn eq<T, U>(this: &T, other: &U) -> bool
+where
+    T: Index<GridIdx, Output = Option<GridValue>>,
+    U: Index<GridIdx, Output = Option<GridValue>>,
+{
+    IIdx::iter()
+        .cartesian_product(JIdx::iter())
+        .all(|idx| this[idx] == other[idx])
+}
+
+pub fn partial_cmp<T, U>(this: &T, other: &U) -> Option<std::cmp::Ordering>
+where
+    T: Index<GridIdx, Output = Option<GridValue>>,
+    U: Index<GridIdx, Output = Option<GridValue>>,
+{
+    for i in IIdx::iter() {
+        for j in JIdx::iter() {
+            match this[(i, j)].partial_cmp(&other[(i, j)]) {
+                None => return None,
+                Some(Ordering::Equal) => continue,
+                res @ Some(_) => return res,
+            }
+        }
+    }
+
+    Some(Ordering::Equal)
 }

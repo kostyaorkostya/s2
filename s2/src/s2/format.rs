@@ -22,9 +22,50 @@ pub trait WriteFormatter {
         W: Write;
 }
 
+#[derive(Debug)]
 pub struct RowMajorAscii {
     empty_cell: u8,
-    row_separator: Option<u8>,
+    row_sep: Option<u8>,
+}
+
+#[derive(Debug)]
+struct RowMajorAsciiReadState<'a> {
+    row_sep_expected: bool,
+    row_major_idx: usize,
+    formatter: &'a RowMajorAscii,
+}
+
+impl<'a> RowMajorAsciiReadState<'a> {
+    fn new<'b>(formatter: &'a RowMajorAscii) -> Self
+    where
+        'b: 'a,
+    {
+        Self {
+            row_sep_expected: false,
+            row_major_idx: 0,
+            formatter,
+        }
+    }
+
+    fn inc(&mut self) {
+        let idx = of_row_major(self.row_major_idx);
+        if idx.0 < IIdx::I8 && idx.1 == JIdx::J8 {
+            self.row_sep_expected = self.formatter.row_sep.is_some();
+        };
+        self.row_major_idx += 1;
+    }
+
+    fn is_row_sep_expected(&self) -> bool {
+        self.formatter.row_sep.is_some() && self.row_sep_expected
+    }
+
+    fn saw_row_sep(&mut self) {
+        self.row_sep_expected = false;
+    }
+
+    fn is_done(&self) -> bool {
+        self.row_major_idx >= IIdx::COUNT * JIdx::COUNT
+    }
 }
 
 impl ReadFormatter for RowMajorAscii {
@@ -35,31 +76,42 @@ impl ReadFormatter for RowMajorAscii {
         R: Read,
         G: IndexMut<GridIdx, Output = Option<GridValue>>,
     {
-        let mut idx = 0;
+        let mut state = RowMajorAsciiReadState::new(self);
+        let is_cell = |c: u8| c.is_ascii_digit() && c != b'0';
+        let is_empty = |c: u8| c == self.empty_cell;
+        let is_row_sep = |c: u8| self.row_sep.map_or(false, |x| x == c);
         loop {
+            let idx = of_row_major(state.row_major_idx);
             let mut c = 0;
             match reader.read_exact(slice::from_mut(&mut c)) {
-                Err(_) => {
-                    // TODO(kostya): better error type
-                    return Err(());
-                }
+                Err(_) => return Err(()),
                 Ok(()) => {
-                    if self.empty_cell == c {
-                        grid[of_row_major(idx)] = None;
-                        idx += 1;
-                    } else if self.row_separator.map_or(false, |x| x == c) {
-                        continue;
-                    } else if c.is_ascii_digit() && c != b'0' {
-                        grid[of_row_major(idx)] = Some(((c - b'0') as usize).try_into().unwrap());
-                        idx += 1;
+                    if state.is_row_sep_expected() {
+                        if is_row_sep(c) {
+                            state.saw_row_sep();
+                            continue;
+                        } else if c.is_ascii_whitespace() {
+                            continue;
+                        } else {
+                            return Err(());
+                        }
                     } else {
-                        // TODO(kostya): better error type
-                        return Err(());
+                        if c.is_ascii_whitespace() {
+                            continue;
+                        } else if is_cell(c) {
+                            grid[idx] = Some(usize::from(c - b'0').try_into().unwrap());
+                            state.inc();
+                        } else if is_empty(c) {
+                            grid[idx] = None;
+                            state.inc();
+                        } else {
+                            return Err(());
+                        }
                     }
                 }
             }
 
-            if idx >= IIdx::COUNT * JIdx::COUNT {
+            if state.is_done() {
                 return Ok(());
             }
         }
@@ -79,13 +131,13 @@ impl WriteFormatter for RowMajorAscii {
                     .map(|x| (b'0' + u8::try_from(usize::from(x)).unwrap()))
                     .unwrap_or(self.empty_cell);
                 let cell = writer.write(slice::from_ref(&cell))?;
-                let row_separator = if idx.0 != IIdx::I8 && idx.1 == JIdx::J8 {
-                    self.row_separator
+                let row_sep = if idx.0 != IIdx::I8 && idx.1 == JIdx::J8 {
+                    self.row_sep
                         .map_or(Ok(0), |x| writer.write(slice::from_ref(&x)))
                 } else {
                     Ok(0)
                 }?;
-                Ok(res + cell + row_separator)
+                Ok(res + cell + row_sep)
             })
     }
 }
@@ -94,23 +146,21 @@ impl RowMajorAscii {
     pub fn default() -> Self {
         Self {
             empty_cell: b'_',
-            row_separator: Some(b'\n'),
+            row_sep: Some(b'\n'),
         }
     }
 
-    pub fn new(empty_cell: Option<char>, row_separator: Option<Option<char>>) -> Self {
+    pub fn new(empty_cell: Option<char>, row_sep: Option<Option<char>>) -> Self {
         let empty_cell: u8 = empty_cell.unwrap_or('_').try_into().unwrap();
-        let row_separator: Option<u8> = row_separator
-            .unwrap_or(Some('\n'))
-            .map(|x| x.try_into().unwrap());
+        let row_sep: Option<u8> = row_sep.unwrap_or(Some('\n')).map(|x| x.try_into().unwrap());
         Self {
             empty_cell,
-            row_separator,
+            row_sep,
         }
     }
 }
 
-pub fn read_from_string_into<F, G>(s: &str, f: &F, grid: &mut G) -> Result<(), F::ReadError>
+pub fn read_from_string_into<F, G>(f: &F, s: &str, grid: &mut G) -> Result<(), F::ReadError>
 where
     F: ReadFormatter,
     G: IndexMut<GridIdx, Output = Option<GridValue>>,
@@ -119,13 +169,13 @@ where
     f.read(&mut cursor, grid)
 }
 
-pub fn read_from_string<F, G>(s: &str, f: &F) -> Result<G, F::ReadError>
+pub fn read_from_string<F, G>(f: &F, s: &str) -> Result<G, F::ReadError>
 where
     F: ReadFormatter,
     G: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
 {
     let mut grid = G::default();
-    read_from_string_into(s, f, &mut grid)?;
+    read_from_string_into(f, s, &mut grid)?;
     Ok(grid)
 }
 
@@ -149,8 +199,8 @@ mod test {
 
     #[test]
     fn test_string_of_empty_grid() {
-        let grid = PlainGrid::new();
         let f = RowMajorAscii::new(None, None);
+        let grid = PlainGrid::new();
         let s = write_string(&f, &grid);
         assert_eq!(
             &s,
@@ -167,5 +217,24 @@ _________
 "#
             .trim()
         );
+    }
+
+    fn roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
+    where
+        F: WriteFormatter + ReadFormatter,
+        F::ReadError: std::fmt::Debug,
+        Src: Index<GridIdx, Output = Option<GridValue>>,
+        Dst: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
+    {
+        let s = write_string(f, src);
+        read_from_string(f, &s).unwrap()
+    }
+
+    #[test]
+    fn test_empty_grid_roundtrip() {
+        let f = RowMajorAscii::new(None, None);
+        let src = PlainGrid::new();
+        let dst: PlainGrid = roundtrip(&f, &src);
+        assert_eq!(&src, &dst);
     }
 }

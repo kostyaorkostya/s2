@@ -6,12 +6,18 @@ use itertools::Itertools;
 use std::ops::{BitOr, Index};
 use strum::{EnumCount, IntoEnumIterator};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Constraint(FixedBitSet);
+
+impl Default for Constraint {
+    fn default() -> Self {
+        Self(FixedBitSet::with_capacity(GridValue::COUNT))
+    }
+}
 
 impl Constraint {
     fn new() -> Self {
-        Self(FixedBitSet::with_capacity(GridValue::COUNT))
+        Self::default()
     }
 
     fn violates(&self, value: GridValue) -> bool {
@@ -35,7 +41,7 @@ impl Constraint {
     {
         self.0
             .zeroes()
-            .map(|x| GridValue::try_from(x).unwrap())
+            .map(|x| GridValue::try_from(x + 1).unwrap())
             .collect::<C>()
     }
 
@@ -62,6 +68,21 @@ struct Constraints {
 impl Constraints {
     fn new() -> Self {
         Default::default()
+    }
+
+    fn of_grid<T>(grid: &T) -> Self
+    where
+        T: Index<GridIdx, Output = Option<GridValue>>,
+    {
+        let mut res = Self::new();
+        IIdx::iter()
+            .cartesian_product(JIdx::iter())
+            .filter_map(|idx| match grid[idx] {
+                None => None,
+                Some(x) => Some((idx, x)),
+            })
+            .for_each(|(idx, value)| res.set(idx, value));
+        res
     }
 
     fn violates(&self, idx: GridIdx, value: GridValue) -> bool {
@@ -103,16 +124,25 @@ impl Constraints {
 pub struct GreedySolver {}
 
 fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
-    let options = IIdx::iter()
+    let empty_cells = IIdx::iter()
         .cartesian_product(JIdx::iter())
         .filter(|idx| cur[*idx].is_none())
-        .sorted_by_cached_key(|idx| constraints.option_count(*idx))
+        .filter_map(|idx| {
+            let option_count = constraints.option_count(idx);
+            if option_count > 0 {
+                Some((idx, option_count))
+            } else {
+                None
+            }
+        })
+        .sorted_by_key(|(_, option_count)| *option_count)
+        .map(|(idx, _)| idx)
         .collect::<Vec<_>>();
-    if options.is_empty() {
+    if empty_cells.is_empty() {
         return true;
     }
 
-    for idx in options {
+    for idx in empty_cells {
         let options: Vec<_> = constraints.options(idx);
         for value in options {
             cur[idx] = Some(value);
@@ -142,7 +172,7 @@ impl Solver for GreedySolver {
         Placement: FromIterator<(GridIdx, GridValue)>,
     {
         let mut cur: PlainGrid = copy_into(grid);
-        let mut constraints = Constraints::new();
+        let mut constraints = Constraints::of_grid(grid);
         let _: bool = solve_rec(&mut cur, &mut constraints);
         IIdx::iter()
             .cartesian_product(JIdx::iter())

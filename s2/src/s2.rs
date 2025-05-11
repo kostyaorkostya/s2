@@ -7,7 +7,6 @@ mod status;
 
 pub use format::read_from_string;
 pub use format::write_string;
-pub use format::Formatter;
 pub use format::ReadFormatter;
 pub use format::RowMajorAscii;
 pub use format::WriteFormatter;

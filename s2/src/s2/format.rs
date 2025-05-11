@@ -35,8 +35,6 @@ pub trait WriteFormatter {
         W: Write;
 }
 
-pub trait Formatter: ReadFormatter + WriteFormatter {}
-
 #[derive(Debug)]
 pub struct RowMajorAscii {
     empty_cell: u8,

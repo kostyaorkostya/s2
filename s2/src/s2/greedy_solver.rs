@@ -20,11 +20,6 @@ impl Constraint {
         Self::default()
     }
 
-    fn violates(&self, value: GridValue) -> bool {
-        let idx: usize = value.into();
-        self.0.contains(idx)
-    }
-
     fn set(&mut self, value: GridValue) {
         let idx: usize = value.into();
         self.0.insert(idx)
@@ -50,7 +45,7 @@ impl Constraint {
     }
 }
 
-impl<'a> BitOr for &'a Constraint {
+impl BitOr for &Constraint {
     type Output = Constraint;
 
     fn bitor(self, rhs: &Constraint) -> Constraint {
@@ -77,19 +72,9 @@ impl Constraints {
         let mut res = Self::new();
         IIdx::iter()
             .cartesian_product(JIdx::iter())
-            .filter_map(|idx| match grid[idx] {
-                None => None,
-                Some(x) => Some((idx, x)),
-            })
+            .filter_map(|idx| grid[idx].map(|x| (idx, x)))
             .for_each(|(idx, value)| res.set(idx, value));
         res
-    }
-
-    fn violates(&self, idx: GridIdx, value: GridValue) -> bool {
-        let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        self.rows[i].violates(value)
-            || self.cols[j].violates(value)
-            || self.sub3x3s[(i / 3 * 3) + j / 3].violates(value)
     }
 
     fn set(&mut self, idx: GridIdx, value: GridValue) {
@@ -156,7 +141,7 @@ fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
         }
     }
 
-    return false;
+    false
 }
 
 impl GreedySolver {

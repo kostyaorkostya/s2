@@ -13,18 +13,18 @@ pub trait ReadFormatter {
         R: Read,
         G: IndexMut<GridIdx, Output = Option<GridValue>>;
 
-    fn read_from_bytes<F, G>(&self, b: &[u8], grid: &mut G) -> Result<(), Self::ReadError>
+    fn read_from_bytes<G>(&self, b: &[u8], grid: &mut G) -> Result<(), Self::ReadError>
     where
         G: IndexMut<GridIdx, Output = Option<GridValue>>,
     {
         self.read(&mut Cursor::new(b), grid)
     }
 
-    fn read_from_string<F, G>(&self, s: &str, grid: &mut G) -> Result<(), Self::ReadError>
+    fn read_from_string<G>(&self, s: &str, grid: &mut G) -> Result<(), Self::ReadError>
     where
         G: IndexMut<GridIdx, Output = Option<GridValue>>,
     {
-        self.read_from_bytes::<F, G>(s.as_bytes(), grid)
+        self.read_from_bytes::<G>(s.as_bytes(), grid)
     }
 }
 
@@ -179,7 +179,7 @@ where
     G: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
 {
     let mut grid = G::default();
-    f.read_from_string::<F, G>(s, &mut grid)?;
+    f.read_from_string(s, &mut grid)?;
     Ok(grid)
 }
 

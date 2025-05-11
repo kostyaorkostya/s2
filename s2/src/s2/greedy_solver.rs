@@ -16,10 +16,6 @@ impl Default for Constraint {
 }
 
 impl Constraint {
-    fn new() -> Self {
-        Self::default()
-    }
-
     fn set(&mut self, value: GridValue) {
         let idx: usize = value.into();
         self.0.insert(idx)

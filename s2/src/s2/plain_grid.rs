@@ -1,9 +1,9 @@
-use super::grid::{render, to_row_major, GridIdx, GridValue, IIdx, JIdx};
+use super::grid::{to_row_major, GridIdx, GridValue, IIdx, JIdx};
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 use strum::EnumCount;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct PlainGrid([Option<GridValue>; IIdx::COUNT * JIdx::COUNT]);
 
 impl Index<GridIdx> for PlainGrid {
@@ -38,9 +38,10 @@ impl IndexMut<GridIdx> for PlainGrid {
     }
 }
 
-impl std::fmt::Display for PlainGrid {
+impl std::fmt::Debug for PlainGrid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        render(self, f)
+        let s = super::format::write_string(&super::format::RowMajorAscii::default(), self);
+        f.write_str(&s)
     }
 }
 

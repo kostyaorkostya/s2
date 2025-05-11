@@ -5,12 +5,17 @@ mod plain_grid;
 mod solver;
 mod status;
 
+pub use format::read_from_string;
+pub use format::write_string;
+pub use format::Formatter;
+pub use format::ReadFormatter;
+pub use format::RowMajorAscii;
+pub use format::WriteFormatter;
 pub use greedy_solver::GreedySolver;
 pub use grid::apply;
 pub use grid::copy;
 pub use grid::copy_and_apply;
 pub use grid::copy_into;
-pub use grid::render;
 pub use grid::GridIdx;
 pub use grid::GridValue;
 pub use grid::IIdx;

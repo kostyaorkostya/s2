@@ -35,6 +35,8 @@ pub trait WriteFormatter {
         W: Write;
 }
 
+pub trait Formatter: ReadFormatter + WriteFormatter {}
+
 #[derive(Debug)]
 pub struct RowMajorAscii {
     empty_cell: u8,
@@ -157,13 +159,6 @@ impl WriteFormatter for RowMajorAscii {
 }
 
 impl RowMajorAscii {
-    pub fn default() -> Self {
-        Self {
-            empty_cell: b'_',
-            row_sep: Some(b'\n'),
-        }
-    }
-
     pub fn new(empty_cell: Option<char>, row_sep: Option<Option<char>>) -> Self {
         let empty_cell: u8 = empty_cell.unwrap_or('_').try_into().unwrap();
         let row_sep: Option<u8> = row_sep.unwrap_or(Some('\n')).map(|x| x.try_into().unwrap());
@@ -171,6 +166,10 @@ impl RowMajorAscii {
             empty_cell,
             row_sep,
         }
+    }
+
+    pub fn default() -> Self {
+        Self::new(None, None)
     }
 }
 

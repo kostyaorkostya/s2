@@ -199,28 +199,6 @@ pub fn try_of_col_major(idx: usize) -> Result<GridIdx, ()> {
     Ok((i, j))
 }
 
-pub fn render<T>(grid: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
-where
-    T: Index<GridIdx, Output = Option<GridValue>>,
-{
-    for i in IIdx::iter() {
-        for j in JIdx::iter() {
-            match grid[(i, j)] {
-                Some(x) => write!(f, "{}", x),
-                None => write!(f, " "),
-            }?;
-            if j != JIdx::J8 {
-                write!(f, "|")?;
-            }
-        }
-        if i != IIdx::I8 {
-            writeln!(f)?;
-            writeln!(f, "{}", "_".repeat(JIdx::COUNT * 2 - 1))?;
-        }
-    }
-    Ok(())
-}
-
 pub fn copy<GridSrc, GridDst>(src: &GridSrc, dst: &mut GridDst)
 where
     GridSrc: Index<GridIdx, Output = Option<GridValue>>,

@@ -109,18 +109,16 @@ impl ReadFormatter for RowMajorAscii {
                         } else {
                             return Err(());
                         }
+                    } else if c.is_ascii_whitespace() {
+                        continue;
+                    } else if is_cell(c) {
+                        grid[idx] = Some(usize::from(c - b'0').try_into().unwrap());
+                        state.inc();
+                    } else if is_empty(c) {
+                        grid[idx] = None;
+                        state.inc();
                     } else {
-                        if c.is_ascii_whitespace() {
-                            continue;
-                        } else if is_cell(c) {
-                            grid[idx] = Some(usize::from(c - b'0').try_into().unwrap());
-                            state.inc();
-                        } else if is_empty(c) {
-                            grid[idx] = None;
-                            state.inc();
-                        } else {
-                            return Err(());
-                        }
+                        return Err(());
                     }
                 }
             }

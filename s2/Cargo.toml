@@ -5,6 +5,10 @@ name = "s2"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "example-1"
+path = "src/examples/example_1.rs"
+
 [dependencies]
 fixedbitset = "0.5.7"
 itertools = "0.14.0"

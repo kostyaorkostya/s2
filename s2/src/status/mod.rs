@@ -1,4 +1,4 @@
-use super::grid::*;
+use crate::grid::{GridIdx, GridValue, IIdx, JIdx};
 use itertools::Itertools;
 use std::iter::{repeat, zip};
 use std::ops::{Index, IndexMut};
@@ -37,13 +37,13 @@ impl Index<GridValue> for Counter {
     type Output = u8;
 
     fn index(&self, grid_value: GridValue) -> &Self::Output {
-        &self.0[<super::grid::GridValue as Into<usize>>::into(grid_value)]
+        &self.0[<GridValue as Into<usize>>::into(grid_value)]
     }
 }
 
 impl IndexMut<GridValue> for Counter {
     fn index_mut(&mut self, grid_value: GridValue) -> &mut Self::Output {
-        &mut self.0[<super::grid::GridValue as Into<usize>>::into(grid_value)]
+        &mut self.0[<GridValue as Into<usize>>::into(grid_value)]
     }
 }
 

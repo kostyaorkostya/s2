@@ -1,6 +1,6 @@
-use super::grid::{copy_into, GridIdx, GridValue, IIdx, JIdx};
-use super::plain_grid::PlainGrid;
-use super::solver::Solver;
+use super::Solver;
+use crate::grid::PlainGrid;
+use crate::grid::{copy_into, GridIdx, GridValue, IIdx, JIdx};
 use fixedbitset::FixedBitSet;
 use itertools::Itertools;
 use std::ops::{BitOr, Index};

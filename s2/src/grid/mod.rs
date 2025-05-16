@@ -5,6 +5,9 @@ use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 
+mod plain_grid;
+pub use plain_grid::PlainGrid;
+
 #[derive(Debug, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IIdx {
     I0,

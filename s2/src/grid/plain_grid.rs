@@ -1,4 +1,5 @@
-use super::grid::{to_row_major, GridIdx, GridValue, IIdx, JIdx};
+use super::{to_row_major, GridIdx, GridValue, IIdx, JIdx};
+use crate::format;
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 use strum::EnumCount;
@@ -19,7 +20,7 @@ where
     T: Index<GridIdx, Output = Option<GridValue>>,
 {
     fn eq(&self, other: &T) -> bool {
-        super::grid::eq(self, other)
+        super::eq(self, other)
     }
 }
 
@@ -28,7 +29,7 @@ where
     T: Index<GridIdx, Output = Option<GridValue>>,
 {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
-        super::grid::partial_cmp(self, other)
+        super::partial_cmp(self, other)
     }
 }
 
@@ -40,7 +41,7 @@ impl IndexMut<GridIdx> for PlainGrid {
 
 impl std::fmt::Debug for PlainGrid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = super::format::write_string(&super::format::RowMajorAscii::default(), self);
+        let s = format::write_string(&format::RowMajorAscii::default(), self);
         f.write_str(&s)
     }
 }

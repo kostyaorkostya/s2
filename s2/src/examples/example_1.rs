@@ -1,6 +1,7 @@
-mod s2;
-
-use s2::*;
+use s2::format::{read_from_string, RowMajorAscii};
+use s2::grid::{copy_and_apply, PlainGrid};
+use s2::solver::{GreedySolver, Solver};
+use s2::status::eval_status;
 
 fn create_grid_1() -> PlainGrid {
     let grid = r#"

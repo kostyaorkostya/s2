@@ -108,22 +108,16 @@ fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
     let empty_cells = IIdx::iter()
         .cartesian_product(JIdx::iter())
         .filter(|idx| cur[*idx].is_none())
-        .filter_map(|idx| {
-            let option_count = constraints.option_count(idx);
-            if option_count > 0 {
-                Some((idx, option_count))
-            } else {
-                None
-            }
-        })
+        .map(|idx| (idx, constraints.option_count(idx)))
         .sorted_by_key(|(_, option_count)| *option_count)
-        .map(|(idx, _)| idx)
         .collect::<Vec<_>>();
-    if empty_cells.is_empty() {
-        return true;
-    }
+    match &empty_cells[..] {
+        [] => return true,
+        [.., (_, 0)] => return false,
+        _ => (),
+    };
 
-    for idx in empty_cells {
+    for (idx, _) in empty_cells {
         let options: Vec<_> = constraints.options(idx);
         for value in options {
             cur[idx] = Some(value);
@@ -147,18 +141,94 @@ impl GreedySolver {
 }
 
 impl Solver for GreedySolver {
-    fn solve<Grid, Placement>(&self, grid: &Grid) -> Placement
+    fn solve<Grid, Placement>(&self, grid: &Grid) -> Result<Placement, ()>
     where
         Grid: Index<GridIdx, Output = Option<GridValue>>,
         Placement: FromIterator<(GridIdx, GridValue)>,
     {
         let mut cur: PlainGrid = copy_into(grid);
+        // TODO(kostya): remove debugging
+        let tmp: PlainGrid = copy_into(grid);
         let mut constraints = Constraints::of_grid(grid);
-        let _: bool = solve_rec(&mut cur, &mut constraints);
-        IIdx::iter()
-            .cartesian_product(JIdx::iter())
-            .filter(|idx| grid[*idx].is_none())
-            .map(|idx| (idx, cur[idx].unwrap()))
-            .collect::<Placement>()
+        if solve_rec(&mut cur, &mut constraints) {
+            Ok(IIdx::iter()
+                .cartesian_product(JIdx::iter())
+                .filter(|idx| grid[*idx].is_none())
+                .map(|idx| {
+                    (
+                        idx,
+                        cur[idx].expect(&format!("{:?}\n{:?}\n\n{:?}", idx, tmp, cur)),
+                    )
+                })
+                .collect::<Placement>())
+        } else {
+            Err(())
+        }
+    }
+}
+
+#[cfg(test)]
+mod greedy_solver_test {
+    use super::{GreedySolver, Solver};
+    use crate::format::{read_from_string, write_string, RowMajorAscii};
+    use crate::grid::{copy_and_apply, PlainGrid};
+
+    #[test]
+    fn test_feasible() {
+        let given = r#"
+53__7____
+6__195___
+_98____6_
+8___6___3
+4__8_3__1
+7___2___6
+_6____28_
+___419__5
+____8__79
+"#
+        .trim();
+        let expected = r#"
+534678912
+672195348
+198342567
+859761423
+426853791
+713924856
+961537284
+287419635
+345286179
+"#
+        .trim();
+        let given: PlainGrid = read_from_string(&RowMajorAscii::default(), given).unwrap();
+        let complete = write_string(
+            &RowMajorAscii::default(),
+            &copy_and_apply::<_, PlainGrid, _>(
+                &given,
+                GreedySolver::new()
+                    .solve::<_, Vec<_>>(&given)
+                    .unwrap()
+                    .into_iter(),
+            ),
+        );
+        assert_eq!(&expected, &complete);
+    }
+
+    #[test]
+    fn test_infeasible() {
+        let given = r#"
+_271_5___
+15__34___
+936___7__
+_8_72_456
+____4_1__
+__1____3_
+___913_4_
+___456___
+_4_8_____
+"#
+        .trim();
+        let given: PlainGrid = read_from_string(&RowMajorAscii::default(), given).unwrap();
+        let solution = GreedySolver::new().solve::<_, Vec<_>>(&given);
+        assert_eq!(solution, Err(()));
     }
 }

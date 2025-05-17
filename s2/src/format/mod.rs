@@ -193,9 +193,9 @@ where
 
 #[cfg(test)]
 mod row_major_ascii_test {
-    use super::super::PlainGrid;
-    use super::write_string;
-    use super::*;
+    use super::{read_from_string, write_string, ReadFormatter, RowMajorAscii, WriteFormatter};
+    use crate::grid::{GridIdx, GridValue, PlainGrid};
+    use std::ops::{Index, IndexMut};
 
     fn grid_roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
     where

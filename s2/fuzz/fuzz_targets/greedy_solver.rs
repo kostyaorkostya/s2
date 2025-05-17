@@ -8,7 +8,7 @@ use s2::solver::{GreedySolver, Solver};
 use s2::status::{eval_status, SudokuStatus};
 
 fuzz_target!(|data: &[u8]| {
-    if let Ok(grid) = std::str::from_utf8(data) {
+    if let Ok(grid) = str::from_utf8(data) {
         if let Ok(grid) = read_from_string::<_, PlainGrid>(&RowMajorAscii::default(), &grid.trim())
         {
             if let Ok(status) = eval_status(&grid) {

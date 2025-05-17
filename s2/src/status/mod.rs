@@ -37,13 +37,13 @@ impl Index<GridValue> for Counter {
     type Output = u8;
 
     fn index(&self, grid_value: GridValue) -> &Self::Output {
-        &self.0[<GridValue as Into<usize>>::into(grid_value)]
+        &self.0[usize::from(grid_value)]
     }
 }
 
 impl IndexMut<GridValue> for Counter {
     fn index_mut(&mut self, grid_value: GridValue) -> &mut Self::Output {
-        &mut self.0[<GridValue as Into<usize>>::into(grid_value)]
+        &mut self.0[usize::from(grid_value)]
     }
 }
 
@@ -82,7 +82,7 @@ pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, ()>
 where
     T: Index<GridIdx, Output = Option<GridValue>>,
 {
-    Ok((IIdx::iter()
+    let rows = IIdx::iter()
         .map(|i| {
             zip(repeat(i), JIdx::iter())
                 .map(|x| grid[x])
@@ -90,32 +90,32 @@ where
                 .eval_status()
                 .map(Into::into)
         })
-        .try_fold(true, |acc, x| x.map(|x| acc && x))?
-        && JIdx::iter()
-            .map(|j| {
-                zip(IIdx::iter(), repeat(j))
-                    .map(|x| grid[x])
-                    .collect::<Counter>()
-                    .eval_status()
-                    .map(Into::into)
-            })
-            .try_fold(true, |acc, x| x.map(|x| acc && x))?
-        && (0..3)
-            .cartesian_product(0..3)
-            .map(|(i_subgrid, j_subgrid)| {
-                (0..3)
-                    .cartesian_product(0..3)
-                    .map(|(i_in_subgrid, j_in_subgrid)| {
-                        (
-                            (i_subgrid * 3 + i_in_subgrid).try_into().unwrap(),
-                            (j_subgrid * 3 + j_in_subgrid).try_into().unwrap(),
-                        )
-                    })
-                    .map(|x| grid[x])
-                    .collect::<Counter>()
-                    .eval_status()
-                    .map(Into::into)
-            })
-            .try_fold(true, |acc, x| x.map(|x| acc && x))?)
-    .into())
+        .try_fold(true, |acc, x| x.map(|x| acc && x))?;
+    let cols = JIdx::iter()
+        .map(|j| {
+            zip(IIdx::iter(), repeat(j))
+                .map(|x| grid[x])
+                .collect::<Counter>()
+                .eval_status()
+                .map(Into::into)
+        })
+        .try_fold(true, |acc, x| x.map(|x| acc && x))?;
+    let sub3x3s = (0..3)
+        .cartesian_product(0..3)
+        .map(|(i_subgrid, j_subgrid)| {
+            (0..3)
+                .cartesian_product(0..3)
+                .map(|(i_in_subgrid, j_in_subgrid)| {
+                    (
+                        (i_subgrid * 3 + i_in_subgrid).try_into().unwrap(),
+                        (j_subgrid * 3 + j_in_subgrid).try_into().unwrap(),
+                    )
+                })
+                .map(|x| grid[x])
+                .collect::<Counter>()
+                .eval_status()
+                .map(Into::into)
+        })
+        .try_fold(true, |acc, x| x.map(|x| acc && x))?;
+    Ok((rows && cols && sub3x3s).into())
 }

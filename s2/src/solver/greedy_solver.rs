@@ -53,7 +53,7 @@ impl BitOr for &Constraint {
 struct Constraints {
     rows: [Constraint; IIdx::COUNT],
     cols: [Constraint; JIdx::COUNT],
-    sub3x3s: [Constraint; (IIdx::COUNT / 3) * (JIdx::COUNT / 3)],
+    boxes: [Constraint; (IIdx::COUNT / 3) * (JIdx::COUNT / 3)],
 }
 
 impl Constraints {
@@ -77,14 +77,14 @@ impl Constraints {
         let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
         self.rows[i].set(value);
         self.cols[j].set(value);
-        self.sub3x3s[(i / 3 * 3) + j / 3].set(value);
+        self.boxes[(i / 3 * 3) + j / 3].set(value);
     }
 
     fn unset(&mut self, idx: GridIdx, value: GridValue) {
         let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
         self.rows[i].unset(value);
         self.cols[j].unset(value);
-        self.sub3x3s[(i / 3 * 3) + j / 3].unset(value);
+        self.boxes[(i / 3 * 3) + j / 3].unset(value);
     }
 
     fn options<C>(&self, idx: GridIdx) -> C
@@ -92,12 +92,12 @@ impl Constraints {
         C: FromIterator<GridValue>,
     {
         let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        (&(&self.rows[i] | &self.cols[j]) | &self.sub3x3s[(i / 3 * 3) + j / 3]).options()
+        (&(&self.rows[i] | &self.cols[j]) | &self.boxes[(i / 3 * 3) + j / 3]).options()
     }
 
     fn option_count(&self, idx: GridIdx) -> usize {
         let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        (&(&self.rows[i] | &self.cols[j]) | &self.sub3x3s[(i / 3 * 3) + j / 3]).option_count()
+        (&(&self.rows[i] | &self.cols[j]) | &self.boxes[(i / 3 * 3) + j / 3]).option_count()
     }
 }
 

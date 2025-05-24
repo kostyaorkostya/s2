@@ -162,31 +162,38 @@ impl SolverStack {
     fn new() -> Self {
         Default::default()
     }
+
+    fn with<'a, 'b, 'c, F, R>(&'a mut self, f: F) -> R
+    where
+        F: FnOnce(&mut SolverStackTail<'b>, &'c mut SolverStackFrame) -> R,
+        'a: 'b,
+        'a: 'c,
+    {
+        let mut tail: SolverStackTail<'a> = self.into();
+        tail.with_frame(|stack, frame| f(stack, frame))
+    }
 }
 
-#[derive(Debug)]
 struct SolverStackTail<'a>(&'a mut [SolverStackFrame]);
 
-impl<'a, 'b> From<&'a mut SolverStack> for SolverStackTail<'b>
-where
-    'a: 'b,
-{
+impl<'a> From<&'a mut [SolverStackFrame]> for SolverStackTail<'a> {
+    fn from(slice: &'a mut [SolverStackFrame]) -> Self {
+        Self(slice)
+    }
+}
+
+impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
     fn from(stack: &'a mut SolverStack) -> Self {
         Self(&mut stack.0[..])
     }
 }
 
-impl<'a> From<&'a mut [SolverStackFrame]> for SolverStackTail<'a> {
-    fn from(tail: &'a mut [SolverStackFrame]) -> Self {
-        Self(tail)
-    }
-}
-
-impl<'a, 'b> SolverStackTail<'a> {
-    fn with_frame<F, R>(&'a mut self, f: F) -> R
+impl<'a> SolverStackTail<'a> {
+    fn with_frame<'b, 'c, F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&'b mut Self, &'b mut SolverStackFrame) -> R,
+        F: FnOnce(&mut SolverStackTail<'b>, &'c mut SolverStackFrame) -> R,
         'a: 'b,
+        'a: 'c,
     {
         let (frame, tail) = self.0.split_first_mut().unwrap();
         frame.clear();
@@ -194,46 +201,42 @@ impl<'a, 'b> SolverStackTail<'a> {
     }
 }
 
-fn solve_rec<'a, 'b>(
-    stack: &'a mut SolverStackTail<'b>,
+fn solve_rec<'a>(
+    stack: &mut SolverStackTail<'a>,
+    frame: &'a mut SolverStackFrame,
     cur: &mut PlainGrid,
     constraints: &mut Constraints,
-) -> bool
-where
-    'a: 'b,
-{
-    stack.with_frame(move |stack, frame| {
-        frame.empty_cells.extend(
-            IIdx::iter()
-                .cartesian_product(JIdx::iter())
-                .filter(|idx| cur[*idx].is_none())
-                .map(|idx| (idx, constraints.option_count(idx))),
-        );
-        frame.empty_cells.sort_by_key(|(_, x)| *x);
+) -> bool {
+    frame.empty_cells.extend(
+        IIdx::iter()
+            .cartesian_product(JIdx::iter())
+            .filter(|idx| cur[*idx].is_none())
+            .map(|idx| (idx, constraints.option_count(idx))),
+    );
+    frame.empty_cells.sort_by_key(|(_, x)| *x);
 
-        match &frame.empty_cells[..] {
-            [] => true,
-            [(_, 0)] | [.., (_, 0)] => false,
-            empty_cells => {
-                let mut complete = false;
-                'outer: for (idx, _) in empty_cells {
-                    constraints.options(*idx, &mut frame.options);
-                    for value in frame.options {
-                        cur[*idx] = Some(value);
-                        constraints.set(*idx, value);
-                        if solve_rec(stack, cur, constraints) {
-                            complete = true;
-                            break 'outer;
-                        } else {
-                            constraints.unset(*idx, value);
-                            cur[*idx] = None;
-                        }
+    match &frame.empty_cells[..] {
+        [] => true,
+        [(_, 0)] | [.., (_, 0)] => false,
+        empty_cells => empty_cells
+            .iter()
+            .map(|(x, _)| x)
+            .find_map(|idx| {
+                constraints.options(*idx, &mut frame.options);
+                for value in frame.options {
+                    cur[*idx] = Some(value);
+                    constraints.set(*idx, value);
+                    if stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints)) {
+                        return Some(true);
+                    } else {
+                        constraints.unset(*idx, value);
+                        cur[*idx] = None;
                     }
                 }
-                complete
-            }
-        }
-    })
+                None
+            })
+            .unwrap_or(false),
+    }
 }
 
 #[derive(Debug, Default)]
@@ -254,8 +257,13 @@ impl Solver for GreedySolver {
         let mut cur: PlainGrid = copy_into(grid);
         // TODO(kostya): remove debugging
         let tmp: PlainGrid = copy_into(grid);
-        let mut state = Box::new((SolverStack::new(), Constraints::of_grid(grid)));
-        if solve_rec(&mut ((&mut state.0).into()), &mut cur, &mut state.1) {
+        let complete = {
+            let mut state = Box::new((SolverStack::new(), Constraints::of_grid(grid)));
+            state
+                .0
+                .with(|stack, frame| solve_rec(stack, frame, &mut cur, &mut state.1))
+        };
+        if complete {
             Ok(IIdx::iter()
                 .cartesian_product(JIdx::iter())
                 .filter(|idx| grid[*idx].is_none())

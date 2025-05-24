@@ -3,14 +3,15 @@ use crate::grid::PlainGrid;
 use crate::grid::{copy_into, GridIdx, GridValue, IIdx, JIdx};
 use itertools::Itertools;
 use std::ops::{BitOr, Index};
-use strum::IntoEnumIterator;
+use strum::{EnumCount, IntoEnumIterator};
+use tinyvec::ArrayVec;
 
 #[derive(Debug, Default)]
 struct Bits9(u16);
 
 impl Bits9 {
-    fn count_zeros(&self) -> u32 {
-        u16::from(self).count_zeros()
+    fn count_zeros(&self) -> u8 {
+        u16::from(self).count_zeros().try_into().unwrap()
     }
 
     fn iter_zeros(&self) -> impl Iterator<Item = u8> + '_ {
@@ -117,7 +118,7 @@ impl Constraints {
         self.rows.row(i) | self.cols.row(j) | self.boxes.row(box_)
     }
 
-    fn option_count(&self, idx: GridIdx) -> u32 {
+    fn option_count(&self, idx: GridIdx) -> u8 {
         self.option_mask(idx).count_zeros()
     }
 
@@ -136,12 +137,15 @@ impl Constraints {
 pub struct GreedySolver {}
 
 fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
-    let empty_cells = IIdx::iter()
-        .cartesian_product(JIdx::iter())
-        .filter(|idx| cur[*idx].is_none())
-        .map(|idx| (idx, constraints.option_count(idx)))
-        .sorted_by_key(|(_, option_count)| *option_count)
-        .collect::<Vec<_>>();
+    let empty_cells = {
+        let mut empty_cells = IIdx::iter()
+            .cartesian_product(JIdx::iter())
+            .filter(|idx| cur[*idx].is_none())
+            .map(|idx| (idx, constraints.option_count(idx)))
+            .collect::<ArrayVec<[_; IIdx::COUNT * JIdx::COUNT]>>();
+        empty_cells.sort_by_key(|(_, x)| *x);
+        empty_cells
+    };
     match &empty_cells[..] {
         [] => return true,
         [(_, 0)] | [.., (_, 0)] => return false,
@@ -149,7 +153,7 @@ fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
     };
 
     for (idx, _) in empty_cells {
-        let options = constraints.options::<Vec<_>>(idx);
+        let options = constraints.options::<ArrayVec<[_; GridValue::COUNT]>>(idx);
         for value in options {
             cur[idx] = Some(value);
             constraints.set(idx, value);

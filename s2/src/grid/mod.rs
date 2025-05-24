@@ -8,8 +8,11 @@ use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 mod plain_grid;
 pub use plain_grid::PlainGrid;
 
-#[derive(Debug, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum IIdx {
+    #[default]
     I0,
     I1,
     I2,
@@ -83,8 +86,11 @@ impl From<IIdx> for usize {
     }
 }
 
-#[derive(Debug, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum JIdx {
+    #[default]
     J0,
     J1,
     J2,

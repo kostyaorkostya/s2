@@ -221,9 +221,7 @@ fn solve_rec(
                 for value in frame.options {
                     cur[*idx] = Some(value);
                     constraints.set(*idx, value);
-                    let complete =
-                        stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints));
-                    if complete {
+                    if stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints)) {
                         return Some(true);
                     } else {
                         constraints.unset(*idx, value);

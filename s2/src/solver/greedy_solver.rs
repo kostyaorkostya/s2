@@ -186,10 +186,9 @@ impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
 }
 
 impl<'caller> SolverStackTail<'caller> {
-    fn with_frame<'callee, F, R>(&'caller mut self, f: F) -> R
+    fn with_frame<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut SolverStackTail<'callee>, &'callee mut SolverStackFrame) -> R,
-        'caller: 'callee,
+        F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
     {
         let (frame, tail) = self.0.split_first_mut().unwrap();
         frame.clear();
@@ -222,7 +221,9 @@ fn solve_rec(
                 for value in frame.options {
                     cur[*idx] = Some(value);
                     constraints.set(*idx, value);
-                    if stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints)) {
+                    let complete =
+                        stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints));
+                    if complete {
                         return Some(true);
                     } else {
                         constraints.unset(*idx, value);

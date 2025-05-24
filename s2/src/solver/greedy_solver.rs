@@ -201,9 +201,9 @@ impl<'a> SolverStackTail<'a> {
     }
 }
 
-fn solve_rec<'a>(
+fn solve_rec<'a, 'b>(
     stack: &mut SolverStackTail<'a>,
-    frame: &'a mut SolverStackFrame,
+    frame: &'b mut SolverStackFrame,
     cur: &mut PlainGrid,
     constraints: &mut Constraints,
 ) -> bool {

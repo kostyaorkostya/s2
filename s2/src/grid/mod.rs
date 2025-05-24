@@ -21,11 +21,11 @@ pub enum IIdx {
     I8,
 }
 
-impl TryFrom<usize> for IIdx {
+impl TryFrom<&usize> for IIdx {
     type Error = ();
 
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        match value {
+    fn try_from(v: &usize) -> Result<Self, Self::Error> {
+        match v {
             0 => Ok(Self::I0),
             1 => Ok(Self::I1),
             2 => Ok(Self::I2),
@@ -40,9 +40,17 @@ impl TryFrom<usize> for IIdx {
     }
 }
 
-impl From<IIdx> for usize {
-    fn from(value: IIdx) -> usize {
-        match value {
+impl TryFrom<usize> for IIdx {
+    type Error = ();
+
+    fn try_from(v: usize) -> Result<Self, Self::Error> {
+        (&v).try_into()
+    }
+}
+
+impl From<&IIdx> for u8 {
+    fn from(v: &IIdx) -> u8 {
+        match v {
             IIdx::I0 => 0,
             IIdx::I1 => 1,
             IIdx::I2 => 2,
@@ -53,6 +61,25 @@ impl From<IIdx> for usize {
             IIdx::I7 => 7,
             IIdx::I8 => 8,
         }
+    }
+}
+
+impl From<IIdx> for u8 {
+    fn from(v: IIdx) -> u8 {
+        (&v).into()
+    }
+}
+
+impl From<&IIdx> for usize {
+    fn from(v: &IIdx) -> usize {
+        let v: u8 = v.into();
+        v as usize
+    }
+}
+
+impl From<IIdx> for usize {
+    fn from(v: IIdx) -> usize {
+        (&v).into()
     }
 }
 
@@ -69,10 +96,10 @@ pub enum JIdx {
     J8,
 }
 
-impl TryFrom<usize> for JIdx {
+impl TryFrom<&usize> for JIdx {
     type Error = ();
 
-    fn try_from(item: usize) -> Result<Self, Self::Error> {
+    fn try_from(item: &usize) -> Result<Self, Self::Error> {
         match item {
             0 => Ok(Self::J0),
             1 => Ok(Self::J1),
@@ -88,9 +115,17 @@ impl TryFrom<usize> for JIdx {
     }
 }
 
-impl From<JIdx> for usize {
-    fn from(value: JIdx) -> usize {
-        match value {
+impl TryFrom<usize> for JIdx {
+    type Error = ();
+
+    fn try_from(v: usize) -> Result<Self, Self::Error> {
+        (&v).try_into()
+    }
+}
+
+impl From<&JIdx> for u8 {
+    fn from(v: &JIdx) -> u8 {
+        match v {
             JIdx::J0 => 0,
             JIdx::J1 => 1,
             JIdx::J2 => 2,
@@ -101,6 +136,25 @@ impl From<JIdx> for usize {
             JIdx::J7 => 7,
             JIdx::J8 => 8,
         }
+    }
+}
+
+impl From<JIdx> for u8 {
+    fn from(v: JIdx) -> u8 {
+        (&v).into()
+    }
+}
+
+impl From<&JIdx> for usize {
+    fn from(v: &JIdx) -> usize {
+        let v: u8 = v.into();
+        v as usize
+    }
+}
+
+impl From<JIdx> for usize {
+    fn from(v: JIdx) -> usize {
+        (&v).into()
     }
 }
 
@@ -120,28 +174,79 @@ pub enum GridValue {
     V9,
 }
 
-impl TryFrom<usize> for GridValue {
+impl GridValue {
+    pub fn into_ascii(&self) -> u8 {
+        b'1' + u8::from(self)
+    }
+
+    pub fn try_from_ascii(ascii: u8) -> Result<Self, ()> {
+        ascii.checked_sub(b'1').ok_or(())?.try_into()
+    }
+}
+
+#[cfg(test)]
+mod grid_value_ascii {
+    use super::GridValue;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn test_roundtrip() {
+        let expected = GridValue::iter().collect::<Vec<_>>();
+        let actual = expected
+            .iter()
+            .map(|x| GridValue::into_ascii(&x))
+            .map(|x| GridValue::try_from_ascii(x).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(&expected, &actual);
+    }
+}
+
+impl TryFrom<&usize> for GridValue {
     type Error = ();
 
-    fn try_from(item: usize) -> Result<Self, Self::Error> {
-        match item {
-            1 => Ok(Self::V1),
-            2 => Ok(Self::V2),
-            3 => Ok(Self::V3),
-            4 => Ok(Self::V4),
-            5 => Ok(Self::V5),
-            6 => Ok(Self::V6),
-            7 => Ok(Self::V7),
-            8 => Ok(Self::V8),
-            9 => Ok(Self::V9),
+    fn try_from(v: &usize) -> Result<Self, Self::Error> {
+        match v {
+            0 => Ok(Self::V1),
+            1 => Ok(Self::V2),
+            2 => Ok(Self::V3),
+            3 => Ok(Self::V4),
+            4 => Ok(Self::V5),
+            5 => Ok(Self::V6),
+            6 => Ok(Self::V7),
+            7 => Ok(Self::V8),
+            8 => Ok(Self::V9),
             _ => Err(()),
         }
     }
 }
 
-impl From<GridValue> for usize {
-    fn from(value: GridValue) -> usize {
-        match value {
+impl TryFrom<usize> for GridValue {
+    type Error = ();
+
+    fn try_from(v: usize) -> Result<Self, Self::Error> {
+        (&v).try_into()
+    }
+}
+
+impl TryFrom<&u8> for GridValue {
+    type Error = ();
+
+    fn try_from(v: &u8) -> Result<Self, Self::Error> {
+        (*v as usize).try_into()
+    }
+}
+
+impl TryFrom<u8> for GridValue {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        (&v).try_into()
+    }
+}
+
+impl From<&GridValue> for u8 {
+    fn from(v: &GridValue) -> u8 {
+        match v {
             GridValue::V1 => 0,
             GridValue::V2 => 1,
             GridValue::V3 => 2,
@@ -155,19 +260,28 @@ impl From<GridValue> for usize {
     }
 }
 
+impl From<GridValue> for u8 {
+    fn from(v: GridValue) -> u8 {
+        (&v).into()
+    }
+}
+
+impl From<&GridValue> for usize {
+    fn from(v: &GridValue) -> usize {
+        let v: u8 = v.into();
+        v as usize
+    }
+}
+
+impl From<GridValue> for usize {
+    fn from(v: GridValue) -> usize {
+        (&v).into()
+    }
+}
+
 impl std::fmt::Display for GridValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x: char = match self {
-            Self::V1 => '1',
-            Self::V2 => '2',
-            Self::V3 => '3',
-            Self::V4 => '4',
-            Self::V5 => '5',
-            Self::V6 => '6',
-            Self::V7 => '7',
-            Self::V8 => '8',
-            Self::V9 => '9',
-        };
+        let x = self.into_ascii() as char;
         write!(f, "{}", x)
     }
 }

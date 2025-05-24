@@ -83,7 +83,7 @@ impl ReadFormatter for RowMajorAscii {
                     } else if c.is_ascii_whitespace() {
                         continue;
                     } else if is_cell(c) {
-                        grid[idx] = Some(usize::from(c - b'0').try_into().unwrap());
+                        grid[idx] = Some(GridValue::try_from_ascii(c).unwrap());
                         state.inc();
                     } else if is_empty(c) {
                         grid[idx] = None;
@@ -110,9 +110,7 @@ impl WriteFormatter for RowMajorAscii {
         IIdx::iter()
             .cartesian_product(JIdx::iter())
             .try_fold(0, |res, idx| {
-                let cell = grid[idx]
-                    .map(|x| (b'1' + u8::try_from(usize::from(x)).unwrap()))
-                    .unwrap_or(self.empty_cell);
+                let cell = grid[idx].map(|x| x.into_ascii()).unwrap_or(self.empty_cell);
                 let cell = writer.write(slice::from_ref(&cell))?;
                 let row_sep = if idx.0 != IIdx::I8 && idx.1 == JIdx::J8 {
                     self.row_sep
@@ -164,9 +162,9 @@ where
 
 #[cfg(test)]
 mod row_major_ascii_test {
-    use super::super::PlainGrid;
     use super::write_string;
     use super::*;
+    use crate::grid::PlainGrid;
 
     fn grid_roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
     where

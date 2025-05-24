@@ -14,7 +14,6 @@ name = "example-2"
 path = "src/examples/example_2.rs"
 
 [dependencies]
-fixedbitset = "0.5.7"
 itertools = "0.14.0"
 strum = "0.27.1"
 strum_macros = "0.27.1"

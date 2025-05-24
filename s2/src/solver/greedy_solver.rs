@@ -1,59 +1,72 @@
 use super::Solver;
 use crate::grid::PlainGrid;
 use crate::grid::{copy_into, GridIdx, GridValue, IIdx, JIdx};
-use fixedbitset::FixedBitSet;
 use itertools::Itertools;
 use std::ops::{BitOr, Index};
-use strum::{EnumCount, IntoEnumIterator};
+use strum::IntoEnumIterator;
 
-#[derive(Debug)]
-struct Constraint(FixedBitSet);
+#[derive(Debug, Default)]
+struct Bits9(u16);
 
-impl Default for Constraint {
-    fn default() -> Self {
-        Self(FixedBitSet::with_capacity(GridValue::COUNT))
+impl Bits9 {
+    fn count_zeros(&self) -> u32 {
+        let sanitized: u16 = self.into();
+        sanitized.count_zeros()
+    }
+
+    fn iter_zeroes(&self) -> impl Iterator<Item = u8> + '_ {
+        (0..8u8).filter(move |&pos| (self.0 & (1u16 << pos)) == 0)
     }
 }
 
-impl Constraint {
-    fn set(&mut self, value: GridValue) {
-        let idx: usize = value.into();
-        self.0.insert(idx)
-    }
-
-    fn unset(&mut self, value: GridValue) {
-        let idx: usize = value.into();
-        self.0.remove(idx)
-    }
-
-    fn options<C>(&self) -> C
-    where
-        C: FromIterator<GridValue>,
-    {
-        self.0
-            .zeroes()
-            .map(|x| GridValue::try_from(x + 1).unwrap())
-            .collect::<C>()
-    }
-
-    fn option_count(&self) -> usize {
-        self.0.count_zeroes(..)
+impl From<u16> for Bits9 {
+    fn from(v: u16) -> Self {
+        Self(v)
     }
 }
 
-impl BitOr for &Constraint {
-    type Output = Constraint;
+impl From<Bits9> for u16 {
+    fn from(v: Bits9) -> Self {
+        v.0 & ((1u16 << 9) - 1)
+    }
+}
 
-    fn bitor(self, rhs: &Constraint) -> Constraint {
-        Constraint(&self.0 | &rhs.0)
+impl From<&Bits9> for u16 {
+    fn from(v: &Bits9) -> Self {
+        v.0 & ((1u16 << 9) - 1)
+    }
+}
+
+impl BitOr for Bits9 {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        (self.0 | rhs.0).into()
+    }
+}
+
+#[derive(Debug, Default)]
+struct BoolMatrix9x9(u128);
+
+impl BoolMatrix9x9 {
+    fn set(&mut self, idx: (u8, u8)) {
+        self.0 |= 1u128 << (idx.0 * 9 + idx.1)
+    }
+
+    fn unset(&mut self, idx: (u8, u8)) {
+        self.0 &= !(1u128 << (idx.0 * 9 + idx.1))
+    }
+
+    fn row(&self, idx: u8) -> Bits9 {
+        ((self.0 << (idx * 9)) as u16).into()
     }
 }
 
 #[derive(Debug, Default)]
 struct Constraints {
-    rows: [Constraint; IIdx::COUNT],
-    cols: [Constraint; JIdx::COUNT],
-    boxes: [Constraint; (IIdx::COUNT / 3) * (JIdx::COUNT / 3)],
+    rows: BoolMatrix9x9,
+    cols: BoolMatrix9x9,
+    boxes: BoolMatrix9x9,
 }
 
 impl Constraints {
@@ -65,39 +78,47 @@ impl Constraints {
     where
         T: Index<GridIdx, Output = Option<GridValue>>,
     {
-        let mut res = Self::new();
+        let mut t = Self::new();
         IIdx::iter()
             .cartesian_product(JIdx::iter())
             .filter_map(|idx| grid[idx].map(|x| (idx, x)))
-            .for_each(|(idx, value)| res.set(idx, value));
-        res
+            .for_each(|(idx, value)| t.set(idx, value));
+        t
     }
 
     fn set(&mut self, idx: GridIdx, value: GridValue) {
-        let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        self.rows[i].set(value);
-        self.cols[j].set(value);
-        self.boxes[(i / 3 * 3) + j / 3].set(value);
+        let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
+        let value: u8 = value.into();
+        self.rows.set((i, value));
+        self.cols.set((j, value));
+        self.boxes.set((((i / 3 * 3) + j / 3), value));
     }
 
     fn unset(&mut self, idx: GridIdx, value: GridValue) {
-        let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        self.rows[i].unset(value);
-        self.cols[j].unset(value);
-        self.boxes[(i / 3 * 3) + j / 3].unset(value);
+        let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
+        let value: u8 = value.into();
+        self.rows.unset((i, value));
+        self.cols.unset((j, value));
+        self.boxes.unset((((i / 3 * 3) + j / 3), value));
+    }
+
+    fn option_mask(&self, idx: GridIdx) -> Bits9 {
+        let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
+        self.rows.row(i) | self.cols.row(j) | self.boxes.row((i / 3 * 3) + j / 3)
+    }
+
+    fn option_count(&self, idx: GridIdx) -> u32 {
+        self.option_mask(idx).count_zeros()
     }
 
     fn options<C>(&self, idx: GridIdx) -> C
     where
         C: FromIterator<GridValue>,
     {
-        let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        (&(&self.rows[i] | &self.cols[j]) | &self.boxes[(i / 3 * 3) + j / 3]).options()
-    }
-
-    fn option_count(&self, idx: GridIdx) -> usize {
-        let (i, j): (usize, usize) = (idx.0.into(), idx.1.into());
-        (&(&self.rows[i] | &self.cols[j]) | &self.boxes[(i / 3 * 3) + j / 3]).option_count()
+        self.option_mask(idx)
+            .iter_zeroes()
+            .map(|x| x.try_into().unwrap())
+            .collect::<C>()
     }
 }
 
@@ -118,7 +139,7 @@ fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
     };
 
     for (idx, _) in empty_cells {
-        let options: Vec<_> = constraints.options(idx);
+        let options = constraints.options::<Vec<_>>(idx);
         for value in options {
             cur[idx] = Some(value);
             constraints.set(idx, value);

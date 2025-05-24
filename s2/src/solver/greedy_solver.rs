@@ -10,30 +10,35 @@ struct Bits9(u16);
 
 impl Bits9 {
     fn count_zeros(&self) -> u32 {
-        let sanitized: u16 = self.into();
-        sanitized.count_zeros()
+        u16::from(self).count_ones()
     }
 
     fn iter_zeroes(&self) -> impl Iterator<Item = u8> + '_ {
-        (0..8u8).filter(move |&pos| (self.0 & (1u16 << pos)) == 0)
+        (0..9u8).filter(move |&pos| (!self.0 & (1u16 << pos)) == 1)
+    }
+}
+
+impl From<&u16> for Bits9 {
+    fn from(v: &u16) -> Self {
+        Self(*v)
     }
 }
 
 impl From<u16> for Bits9 {
     fn from(v: u16) -> Self {
-        Self(v)
-    }
-}
-
-impl From<Bits9> for u16 {
-    fn from(v: Bits9) -> Self {
-        v.0 & ((1u16 << 9) - 1)
+        Self::from(&v)
     }
 }
 
 impl From<&Bits9> for u16 {
     fn from(v: &Bits9) -> Self {
         v.0 & ((1u16 << 9) - 1)
+    }
+}
+
+impl From<Bits9> for u16 {
+    fn from(v: Bits9) -> Self {
+        (&v).into()
     }
 }
 
@@ -86,25 +91,30 @@ impl Constraints {
         t
     }
 
-    fn set(&mut self, idx: GridIdx, value: GridValue) {
+    fn constraint_indices(idx: GridIdx) -> (u8, u8, u8) {
         let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
+        (i, j, ((i / 3 * 3) + j / 3))
+    }
+
+    fn set(&mut self, idx: GridIdx, value: GridValue) {
+        let (i, j, box_) = Self::constraint_indices(idx);
         let value: u8 = value.into();
         self.rows.set((i, value));
         self.cols.set((j, value));
-        self.boxes.set((((i / 3 * 3) + j / 3), value));
+        self.boxes.set((box_, value));
     }
 
     fn unset(&mut self, idx: GridIdx, value: GridValue) {
-        let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
+        let (i, j, box_) = Self::constraint_indices(idx);
         let value: u8 = value.into();
         self.rows.unset((i, value));
         self.cols.unset((j, value));
-        self.boxes.unset((((i / 3 * 3) + j / 3), value));
+        self.boxes.unset((box_, value));
     }
 
     fn option_mask(&self, idx: GridIdx) -> Bits9 {
-        let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
-        self.rows.row(i) | self.cols.row(j) | self.boxes.row((i / 3 * 3) + j / 3)
+        let (i, j, box_) = Self::constraint_indices(idx);
+        self.rows.row(i) | self.cols.row(j) | self.boxes.row(box_)
     }
 
     fn option_count(&self, idx: GridIdx) -> u32 {
@@ -134,7 +144,7 @@ fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
         .collect::<Vec<_>>();
     match &empty_cells[..] {
         [] => return true,
-        [.., (_, 0)] => return false,
+        [(_, 0)] | [.., (_, 0)] => return false,
         _ => (),
     };
 

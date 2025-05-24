@@ -10,11 +10,11 @@ struct Bits9(u16);
 
 impl Bits9 {
     fn count_zeros(&self) -> u32 {
-        u16::from(self).count_ones()
+        u16::from(self).count_zeros()
     }
 
-    fn iter_zeroes(&self) -> impl Iterator<Item = u8> + '_ {
-        (0..9u8).filter(move |&pos| (!self.0 & (1u16 << pos)) == 1)
+    fn iter_zeros(&self) -> impl Iterator<Item = u8> + '_ {
+        (0..9u8).filter(move |&pos| (self.0 & (1u16 << pos)) == 0)
     }
 }
 
@@ -63,7 +63,7 @@ impl BoolMatrix9x9 {
     }
 
     fn row(&self, idx: u8) -> Bits9 {
-        ((self.0 << (idx * 9)) as u16).into()
+        ((self.0 >> (idx * 9)) as u16).into()
     }
 }
 
@@ -126,7 +126,7 @@ impl Constraints {
         C: FromIterator<GridValue>,
     {
         self.option_mask(idx)
-            .iter_zeroes()
+            .iter_zeros()
             .map(|x| x.try_into().unwrap())
             .collect::<C>()
     }

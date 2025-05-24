@@ -122,52 +122,114 @@ impl Constraints {
         self.option_mask(idx).count_zeros()
     }
 
-    fn options<C>(&self, idx: GridIdx) -> C
+    fn options<E>(&self, idx: GridIdx, e: &mut E)
     where
-        C: FromIterator<GridValue>,
+        E: Extend<GridValue>,
     {
-        self.option_mask(idx)
-            .iter_zeros()
-            .map(|x| x.try_into().unwrap())
-            .collect::<C>()
+        e.extend(
+            self.option_mask(idx)
+                .iter_zeros()
+                .map(|x| x.try_into().unwrap()),
+        )
     }
 }
 
 #[derive(Debug, Default)]
-pub struct GreedySolver;
+struct SolverStackFrame {
+    empty_cells: ArrayVec<[((IIdx, JIdx), u8); IIdx::COUNT * JIdx::COUNT]>,
+    options: ArrayVec<[GridValue; GridValue::COUNT]>,
+}
 
-fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
-    let empty_cells = {
-        let mut empty_cells = IIdx::iter()
-            .cartesian_product(JIdx::iter())
-            .filter(|idx| cur[*idx].is_none())
-            .map(|idx| (idx, constraints.option_count(idx)))
-            .collect::<ArrayVec<[_; IIdx::COUNT * JIdx::COUNT]>>();
-        empty_cells.sort_by_key(|(_, x)| *x);
-        empty_cells
-    };
-    match &empty_cells[..] {
-        [] => return true,
-        [(_, 0)] | [.., (_, 0)] => return false,
-        _ => (),
-    };
+impl SolverStackFrame {
+    fn clear(&mut self) {
+        self.empty_cells.clear();
+        self.options.clear();
+    }
+}
 
-    for (idx, _) in empty_cells {
-        let options = constraints.options::<ArrayVec<[_; GridValue::COUNT]>>(idx);
-        for value in options {
-            cur[idx] = Some(value);
-            constraints.set(idx, value);
-            if solve_rec(cur, constraints) {
-                return true;
-            } else {
-                constraints.unset(idx, value);
-                cur[idx] = None;
-            }
+const SOLVER_RECURSIVE_DEPTH: usize = IIdx::COUNT * JIdx::COUNT + 1;
+
+#[derive(Debug)]
+struct SolverStack {
+    frames: [SolverStackFrame; SOLVER_RECURSIVE_DEPTH],
+    next: usize,
+}
+
+impl Default for SolverStack {
+    fn default() -> Self {
+        Self {
+            frames: std::array::from_fn(|_| SolverStackFrame::default()),
+            next: 0,
         }
     }
-
-    false
 }
+
+impl SolverStack {
+    fn new() -> Self {
+        Default::default()
+    }
+
+    fn push(&mut self) -> &mut SolverStackFrame {
+        let frame = &mut self.frames[self.next];
+        frame.clear();
+        self.next += 1;
+        frame
+    }
+
+    fn pop(&mut self) {
+        self.next -= 1;
+    }
+
+    fn with_frame<F, R>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut SolverStackFrame) -> R,
+    {
+        let frame = self.push();
+        let result = f(frame);
+        self.pop();
+        result
+    }
+}
+
+fn solve_rec(stack: &mut SolverStack, cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
+    let frame = stack.push();
+
+    frame.empty_cells.extend(
+        IIdx::iter()
+            .cartesian_product(JIdx::iter())
+            .filter(|idx| cur[*idx].is_none())
+            .map(|idx| (idx, constraints.option_count(idx))),
+    );
+    frame.empty_cells.sort_by_key(|(_, x)| *x);
+
+    let result = match &frame.empty_cells[..] {
+        [] => true,
+        [(_, 0)] | [.., (_, 0)] => false,
+        empty_cells => {
+            let mut complete = false;
+            'outer: for (idx, _) in empty_cells {
+                constraints.options(*idx, &mut frame.options);
+                for value in frame.options {
+                    cur[*idx] = Some(value);
+                    constraints.set(*idx, value);
+                    if solve_rec(stack, cur, constraints) {
+                        complete = true;
+                        break 'outer;
+                    } else {
+                        constraints.unset(*idx, value);
+                        cur[*idx] = None;
+                    }
+                }
+            }
+            complete
+        }
+    };
+    stack.pop();
+    result
+}
+
+#[derive(Debug, Default)]
+pub struct GreedySolver;
 
 impl GreedySolver {
     pub fn new() -> Self {
@@ -184,8 +246,8 @@ impl Solver for GreedySolver {
         let mut cur: PlainGrid = copy_into(grid);
         // TODO(kostya): remove debugging
         let tmp: PlainGrid = copy_into(grid);
-        let mut constraints = Constraints::of_grid(grid);
-        if solve_rec(&mut cur, &mut constraints) {
+        let mut state = Box::new((SolverStack::new(), Constraints::of_grid(grid)));
+        if solve_rec(&mut state.0, &mut cur, &mut state.1) {
             Ok(IIdx::iter()
                 .cartesian_product(JIdx::iter())
                 .filter(|idx| grid[*idx].is_none())

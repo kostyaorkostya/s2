@@ -134,7 +134,7 @@ impl Constraints {
 }
 
 #[derive(Debug, Default)]
-pub struct GreedySolver {}
+pub struct GreedySolver;
 
 fn solve_rec(cur: &mut PlainGrid, constraints: &mut Constraints) -> bool {
     let empty_cells = {

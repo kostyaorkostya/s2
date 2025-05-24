@@ -217,6 +217,7 @@ fn solve_rec(
             .iter()
             .map(|(x, _)| x)
             .find_map(|idx| {
+                frame.options.clear();
                 constraints.options(*idx, &mut frame.options);
                 for value in frame.options {
                     cur[*idx] = Some(value);

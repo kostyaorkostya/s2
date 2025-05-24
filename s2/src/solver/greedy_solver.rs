@@ -163,14 +163,11 @@ impl SolverStack {
         Default::default()
     }
 
-    fn with<'a, 'b, 'c, F, R>(&'a mut self, f: F) -> R
+    fn with<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut SolverStackTail<'b>, &'c mut SolverStackFrame) -> R,
-        'a: 'b,
-        'a: 'c,
+        F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
     {
-        let mut tail: SolverStackTail<'a> = self.into();
-        tail.with_frame(|stack, frame| f(stack, frame))
+        SolverStackTail::from(self).with_frame(f)
     }
 }
 
@@ -188,12 +185,11 @@ impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
     }
 }
 
-impl<'a> SolverStackTail<'a> {
-    fn with_frame<'b, 'c, F, R>(&mut self, f: F) -> R
+impl<'caller> SolverStackTail<'caller> {
+    fn with_frame<'callee, F, R>(&'caller mut self, f: F) -> R
     where
-        F: FnOnce(&mut SolverStackTail<'b>, &'c mut SolverStackFrame) -> R,
-        'a: 'b,
-        'a: 'c,
+        F: FnOnce(&mut SolverStackTail<'callee>, &'callee mut SolverStackFrame) -> R,
+        'caller: 'callee,
     {
         let (frame, tail) = self.0.split_first_mut().unwrap();
         frame.clear();
@@ -201,9 +197,9 @@ impl<'a> SolverStackTail<'a> {
     }
 }
 
-fn solve_rec<'a, 'b>(
-    stack: &mut SolverStackTail<'a>,
-    frame: &'b mut SolverStackFrame,
+fn solve_rec(
+    stack: &mut SolverStackTail<'_>,
+    frame: &mut SolverStackFrame,
     cur: &mut PlainGrid,
     constraints: &mut Constraints,
 ) -> bool {

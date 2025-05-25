@@ -123,6 +123,12 @@ impl WriteFormatter for RowMajorAscii {
     }
 }
 
+impl Default for RowMajorAscii {
+    fn default() -> Self {
+        Self::new(None, None)
+    }
+}
+
 impl RowMajorAscii {
     pub fn new(empty_cell: Option<char>, row_sep: Option<Option<char>>) -> Self {
         let empty_cell: u8 = empty_cell.unwrap_or('_').try_into().unwrap();
@@ -131,10 +137,6 @@ impl RowMajorAscii {
             empty_cell,
             row_sep,
         }
-    }
-
-    pub fn default() -> Self {
-        Self::new(None, None)
     }
 }
 

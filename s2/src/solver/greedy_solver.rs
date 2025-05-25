@@ -266,7 +266,7 @@ impl Solver for GreedySolver {
                 .map(|idx| {
                     (
                         idx,
-                        cur[idx].expect(&format!("{:?}\n{:?}\n\n{:?}", idx, tmp, cur)),
+                        cur[idx].unwrap_or_else(|| panic!("{idx:?}\n{tmp:?}\n\n{cur:?}")),
                     )
                 })
                 .collect::<Placement>())

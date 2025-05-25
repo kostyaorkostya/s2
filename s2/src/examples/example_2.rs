@@ -21,7 +21,7 @@ _4_8_____
 
 fn main() {
     let grid = create_grid();
-    println!("{:?}", grid);
+    println!("{grid:?}");
     println!("{:?}", eval_status(&grid));
     let complete = copy_and_apply::<_, PlainGrid, _>(
         &grid,
@@ -31,5 +31,5 @@ fn main() {
             .into_iter(),
     );
     println!("{:?}", eval_status(&complete));
-    println!("{:?}", complete);
+    println!("{complete:?}");
 }

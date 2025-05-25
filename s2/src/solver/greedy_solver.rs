@@ -113,16 +113,16 @@ impl Constraints {
         self.boxes.unset((box_, value));
     }
 
-    fn option_mask(&self, idx: GridIdx) -> Bits9 {
+    fn domain_mask(&self, idx: GridIdx) -> Bits9 {
         let (i, j, box_) = Self::constraint_indices(idx);
         self.rows.row(i) | self.cols.row(j) | self.boxes.row(box_)
     }
 
-    fn option_count(&self, idx: GridIdx) -> u8 {
+    fn domain_size(&self, idx: GridIdx) -> u8 {
         self.option_mask(idx).count_zeros()
     }
 
-    fn options<E>(&self, idx: GridIdx, e: &mut E)
+    fn domain<E>(&self, idx: GridIdx, e: &mut E)
     where
         E: Extend<GridValue>,
     {
@@ -137,13 +137,13 @@ impl Constraints {
 #[derive(Debug, Default)]
 struct SolverStackFrame {
     empty_cells: ArrayVec<[((IIdx, JIdx), u8); IIdx::COUNT * JIdx::COUNT]>,
-    options: ArrayVec<[GridValue; GridValue::COUNT]>,
+    domain: ArrayVec<[GridValue; GridValue::COUNT]>,
 }
 
 impl SolverStackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
-        self.options.clear();
+        self.domain.clear();
     }
 }
 
@@ -206,7 +206,7 @@ fn solve_rec(
         IIdx::iter()
             .cartesian_product(JIdx::iter())
             .filter(|idx| cur[*idx].is_none())
-            .map(|idx| (idx, constraints.option_count(idx))),
+            .map(|idx| (idx, constraints.domain_size(idx))),
     );
     frame.empty_cells.sort_by_key(|(_, x)| *x);
 
@@ -217,9 +217,9 @@ fn solve_rec(
             .iter()
             .map(|(x, _)| x)
             .find_map(|idx| {
-                frame.options.clear();
-                constraints.options(*idx, &mut frame.options);
-                for value in frame.options {
+                frame.domain.clear();
+                constraints.domain(*idx, &mut frame.domain);
+                for value in frame.domain {
                     cur[*idx] = Some(value);
                     constraints.set(*idx, value);
                     if stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints)) {

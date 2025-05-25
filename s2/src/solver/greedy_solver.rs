@@ -119,7 +119,7 @@ impl Constraints {
     }
 
     fn domain_size(&self, idx: GridIdx) -> u8 {
-        self.option_mask(idx).count_zeros()
+        self.domain_mask(idx).count_zeros()
     }
 
     fn domain<E>(&self, idx: GridIdx, e: &mut E)
@@ -127,7 +127,7 @@ impl Constraints {
         E: Extend<GridValue>,
     {
         e.extend(
-            self.option_mask(idx)
+            self.domain_mask(idx)
                 .iter_zeros()
                 .map(|x| x.try_into().unwrap()),
         )

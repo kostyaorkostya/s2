@@ -240,7 +240,7 @@ pub struct GreedySolver;
 
 impl GreedySolver {
     pub fn new() -> Self {
-        Self::default()
+        Default::default()
     }
 }
 

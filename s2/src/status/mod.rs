@@ -12,6 +12,15 @@ pub enum SudokuStatus {
     Complete,
 }
 
+#[derive(Debug, Default)]
+pub struct SudokuStatusError(());
+
+impl SudokuStatusError {
+    fn new() -> Self {
+        Default::default()
+    }
+}
+
 impl From<SudokuStatus> for bool {
     fn from(value: SudokuStatus) -> Self {
         match value {
@@ -65,20 +74,20 @@ impl Counter {
         Default::default()
     }
 
-    fn eval_status(&self) -> Result<SudokuStatus, ()> {
+    fn eval_status(&self) -> Result<SudokuStatus, SudokuStatusError> {
         let mut complete = true;
         for cnt in self.0 {
             match cnt {
                 0 => complete = false,
                 1 => (),
-                _ => return Err(()),
+                _ => return Err(SudokuStatusError::new()),
             }
         }
         Ok(complete.into())
     }
 }
 
-pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, ()>
+pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, SudokuStatusError>
 where
     T: Index<GridIdx, Output = Option<GridValue>>,
 {

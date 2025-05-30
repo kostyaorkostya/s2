@@ -159,15 +159,29 @@ impl Default for SolverStack {
 }
 
 impl SolverStack {
-    fn new() -> Self {
-        Default::default()
-    }
-
     fn with<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
     {
         SolverStackTail::from(self).with_frame(f)
+    }
+}
+
+#[derive(Debug)]
+struct SolverState {
+    stack: SolverStack,
+    constraints: Constraints,
+}
+
+impl SolverState {
+    fn of_grid<T>(grid: &T) -> Self
+    where
+        T: Index<GridIdx, Output = Option<GridValue>>,
+    {
+        Self {
+            stack: Default::default(),
+            constraints: Constraints::of_grid(grid),
+        }
     }
 }
 
@@ -208,6 +222,7 @@ fn solve_rec(
             .filter(|idx| cur[*idx].is_none())
             .map(|idx| (idx, constraints.domain_size(idx))),
     );
+    // radix sort it? there are only 10 possible values to sort by
     frame.empty_cells.sort_by_key(|(_, x)| *x);
 
     match &frame.empty_cells[..] {
@@ -254,10 +269,10 @@ impl Solver for GreedySolver {
         // TODO(kostya): remove debugging
         let tmp: PlainGrid = copy_into(grid);
         let complete = {
-            let mut state = Box::new((SolverStack::new(), Constraints::of_grid(grid)));
+            let mut state = Box::new(SolverState::of_grid(&cur));
             state
-                .0
-                .with(|stack, frame| solve_rec(stack, frame, &mut cur, &mut state.1))
+                .stack
+                .with(|stack, frame| solve_rec(stack, frame, &mut cur, &mut state.constraints))
         };
         if complete {
             Ok(IIdx::iter()

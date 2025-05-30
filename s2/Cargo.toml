@@ -17,4 +17,5 @@ path = "src/examples/example_2.rs"
 itertools = "0.14.0"
 strum = "0.27.1"
 strum_macros = "0.27.1"
+thiserror = "2.0.12"
 tinyvec = { version = "1.9.0", features = ["rustc_1_55"] }

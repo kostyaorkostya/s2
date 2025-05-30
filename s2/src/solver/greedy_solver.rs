@@ -1,4 +1,4 @@
-use super::Solver;
+use super::{Solver, SolverError};
 use crate::grid::PlainGrid;
 use crate::grid::{copy_into, GridIdx, GridValue, IIdx, JIdx};
 use itertools::Itertools;
@@ -245,7 +245,7 @@ impl GreedySolver {
 }
 
 impl Solver for GreedySolver {
-    fn solve<Grid, Placement>(&self, grid: &Grid) -> Result<Placement, ()>
+    fn solve<Grid, Placement>(&self, grid: &Grid) -> Result<Placement, SolverError>
     where
         Grid: Index<GridIdx, Output = Option<GridValue>>,
         Placement: FromIterator<(GridIdx, GridValue)>,
@@ -271,14 +271,14 @@ impl Solver for GreedySolver {
                 })
                 .collect::<Placement>())
         } else {
-            Err(())
+            Err(SolverError)
         }
     }
 }
 
 #[cfg(test)]
 mod greedy_solver_test {
-    use super::{GreedySolver, Solver};
+    use super::{GreedySolver, Solver, SolverError};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
     use crate::grid::{copy_and_apply, PlainGrid};
 
@@ -338,6 +338,6 @@ _4_8_____
         .trim();
         let given: PlainGrid = read_from_string(&RowMajorAscii::default(), given).unwrap();
         let solution = GreedySolver::new().solve::<_, Vec<_>>(&given);
-        assert_eq!(solution, Err(()));
+        assert_eq!(solution, Err(SolverError));
     }
 }

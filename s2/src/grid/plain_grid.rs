@@ -25,7 +25,14 @@ impl IndexMut<GridIdx> for PlainGrid {
     }
 }
 
-impl super::Grid for PlainGrid {}
+impl super::Grid for PlainGrid {
+    fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
+    }
+}
 
 impl super::GridMut for PlainGrid {}
 

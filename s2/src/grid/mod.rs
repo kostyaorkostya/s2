@@ -399,27 +399,35 @@ pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
     }
 
     fn iter_values_row_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
-        GridIdx::iter_row_wise().map(|idx| self[idx].clone())
+        self.iter_row_wise().map(|(_, x)| x)
     }
 
     fn iter_values_col_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
-        GridIdx::iter_col_wise().map(|idx| self[idx].clone())
+        self.iter_col_wise().map(|(_, x)| x)
     }
 
     fn iter_set_row_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
-        GridIdx::iter_row_wise().filter_map(|idx| Some((idx, self[idx]?.clone())))
+        self.iter_row_wise()
+            .filter_map(|(idx, value)| Some((idx, value?)))
     }
 
     fn iter_set_col_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
-        GridIdx::iter_col_wise().filter_map(|idx| Some((idx, self[idx]?.clone())))
+        self.iter_col_wise()
+            .filter_map(|(idx, value)| Some((idx, value?)))
     }
 
     fn iter_unset_row_wise(&self) -> impl Iterator<Item = GridIdx> {
-        GridIdx::iter_row_wise().filter(|idx| self[*idx].is_none())
+        self.iter_row_wise().filter_map(|(idx, value)| match value {
+            None => Some(idx),
+            Some(_) => None,
+        })
     }
 
     fn iter_unset_col_wise(&self) -> impl Iterator<Item = GridIdx> {
-        GridIdx::iter_col_wise().filter(|idx| self[*idx].is_none())
+        self.iter_col_wise().filter_map(|(idx, value)| match value {
+            None => Some(idx),
+            Some(_) => None,
+        })
     }
 
     fn diff<T>(&self, other: &T) -> impl Iterator<Item = GridDiff>

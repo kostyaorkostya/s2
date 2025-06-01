@@ -295,8 +295,8 @@ impl std::fmt::Display for GridValue {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GridIdx {
-    i: IIdx,
-    j: JIdx,
+    pub i: IIdx,
+    pub j: JIdx,
 }
 
 impl From<&(IIdx, JIdx)> for GridIdx {
@@ -345,37 +345,37 @@ impl From<GridIdx> for (IIdx, JIdx) {
 }
 
 impl GridIdx {
-    const COUNT: usize = IIdx::COUNT * JIdx::COUNT;
+    pub const COUNT: usize = IIdx::COUNT * JIdx::COUNT;
 
-    fn row_major(&self) -> usize {
+    pub fn row_major(&self) -> usize {
         let i: usize = self.i.into();
         let j: usize = self.j.into();
         i * IIdx::COUNT + j
     }
 
-    fn try_of_row_major(idx: usize) -> Result<Self, ()> {
+    pub fn try_of_row_major(idx: usize) -> Result<Self, ()> {
         let i: IIdx = (idx / IIdx::COUNT).try_into()?;
         let j: JIdx = (idx % JIdx::COUNT).try_into()?;
         Ok((i, j).into())
     }
 
-    fn col_major(&self) -> usize {
+    pub fn col_major(&self) -> usize {
         let i: usize = self.i.into();
         let j: usize = self.j.into();
         j * JIdx::COUNT + i
     }
 
-    fn try_of_col_major(idx: usize) -> Result<Self, ()> {
+    pub fn try_of_col_major(idx: usize) -> Result<Self, ()> {
         let j: JIdx = (idx / JIdx::COUNT).try_into()?;
         let i: IIdx = (idx % IIdx::COUNT).try_into()?;
         Ok((i, j).into())
     }
 
-    fn iter_row_wise() -> impl Iterator<Item = Self> {
+    pub fn iter_row_wise() -> impl Iterator<Item = Self> {
         IIdx::iter().cartesian_product(JIdx::iter()).map(Into::into)
     }
 
-    fn iter_col_wise() -> impl Iterator<Item = Self> {
+    pub fn iter_col_wise() -> impl Iterator<Item = Self> {
         JIdx::iter()
             .cartesian_product(IIdx::iter())
             .map(|(j, i)| (i, j))
@@ -398,12 +398,20 @@ pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
         GridIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
     }
 
+    fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        self.iter_row_wise()
+    }
+
     fn iter_values_row_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
         self.iter_row_wise().map(|(_, x)| x)
     }
 
     fn iter_values_col_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
         self.iter_col_wise().map(|(_, x)| x)
+    }
+
+    fn iter_values(&self) -> impl Iterator<Item = Option<GridValue>> {
+        self.iter_values_row_wise()
     }
 
     fn iter_set_row_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
@@ -414,6 +422,10 @@ pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
     fn iter_set_col_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
         self.iter_col_wise()
             .filter_map(|(idx, value)| Some((idx, value?)))
+    }
+
+    fn iter_set(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
+        self.iter_set_row_wise()
     }
 
     fn iter_unset_row_wise(&self) -> impl Iterator<Item = GridIdx> {
@@ -428,6 +440,10 @@ pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
             None => Some(idx),
             Some(_) => None,
         })
+    }
+
+    fn iter_unset(&self) -> impl Iterator<Item = GridIdx> {
+        self.iter_unset_row_wise()
     }
 
     fn diff<T>(&self, other: &T) -> impl Iterator<Item = GridDiff>
@@ -445,11 +461,10 @@ pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
 
     fn copy_into<T>(&self) -> T
     where
-        T: Grid + IndexMut<GridIdx, Output = Option<GridValue>> + Default + Sized,
+        T: GridMutWithDefault + Sized,
     {
         let mut dst = T::default();
-        self.iter_row_wise()
-            .for_each(|(idx, value)| dst[idx] = value);
+        self.iter().for_each(|(idx, value)| dst[idx] = value);
         dst
     }
 }
@@ -487,9 +502,9 @@ pub trait GridMut: Grid + IndexMut<GridIdx, Output = Option<GridValue>> {
 
     fn assign<T>(&mut self, src: &T)
     where
-        T: Index<GridIdx, Output = Option<GridValue>> + ?Sized,
+        T: Grid + ?Sized,
     {
-        GridIdx::iter_row_wise().for_each(|idx| self[idx] = src[idx])
+        src.iter().for_each(|(idx, value)| self[idx] = value)
     }
 }
 
@@ -520,6 +535,13 @@ pub trait GridMutWithDefault: GridMut + Default {
         let mut dst: Self = Default::default();
         GridIdx::iter_row_wise().for_each(|idx| dst[idx] = f(idx));
         dst
+    }
+
+    fn copy_of<T>(other: &T) -> Self
+    where
+        T: Grid,
+    {
+        other.copy_into()
     }
 }
 

@@ -1,6 +1,5 @@
 use super::{Solver, SolverError};
-use crate::grid::PlainGrid;
-use crate::grid::{copy_into, GridIdx, GridValue, IIdx, JIdx};
+use crate::grid::{Grid, GridDiff, GridIdx, GridMut, GridValue, IIdx, JIdx, PlainGrid};
 use itertools::Itertools;
 use std::ops::{BitOr, Index};
 use strum::{EnumCount, IntoEnumIterator};
@@ -82,18 +81,15 @@ impl Constraints {
 
     fn of_grid<T>(grid: &T) -> Self
     where
-        T: Index<GridIdx, Output = Option<GridValue>>,
+        T: Grid + ?Sized,
     {
         let mut t = Self::new();
-        IIdx::iter()
-            .cartesian_product(JIdx::iter())
-            .filter_map(|idx| grid[idx].map(|x| (idx, x)))
-            .for_each(|(idx, value)| t.set(idx, value));
+        grid.iter_set().for_each(|(idx, value)| t.set(idx, value));
         t
     }
 
     fn constraint_indices(idx: GridIdx) -> (u8, u8, u8) {
-        let (i, j): (u8, u8) = (idx.0.into(), idx.1.into());
+        let (i, j): (u8, u8) = (idx.i.into(), idx.j.into());
         (i, j, ((i / 3 * 3) + j / 3))
     }
 
@@ -136,7 +132,7 @@ impl Constraints {
 
 #[derive(Debug, Default)]
 struct SolverStackFrame {
-    empty_cells: ArrayVec<[((IIdx, JIdx), u8); IIdx::COUNT * JIdx::COUNT]>,
+    empty_cells: ArrayVec<[(GridIdx, u8); GridIdx::COUNT]>,
     domain: ArrayVec<[GridValue; GridValue::COUNT]>,
 }
 
@@ -147,7 +143,7 @@ impl SolverStackFrame {
     }
 }
 
-const SOLVER_RECURSIVE_DEPTH: usize = IIdx::COUNT * JIdx::COUNT + 1;
+const SOLVER_RECURSIVE_DEPTH: usize = GridIdx::COUNT + 1;
 
 #[derive(Debug)]
 struct SolverStack([SolverStackFrame; SOLVER_RECURSIVE_DEPTH]);
@@ -176,7 +172,7 @@ struct SolverState {
 impl SolverState {
     fn of_grid<T>(grid: &T) -> Self
     where
-        T: Index<GridIdx, Output = Option<GridValue>>,
+        T: Grid + ?Sized,
     {
         Self {
             stack: Default::default(),
@@ -217,9 +213,7 @@ fn solve_rec(
     constraints: &mut Constraints,
 ) -> bool {
     frame.empty_cells.extend(
-        IIdx::iter()
-            .cartesian_product(JIdx::iter())
-            .filter(|idx| cur[*idx].is_none())
+        cur.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
     );
     // radix sort it? there are only 10 possible values to sort by
@@ -260,31 +254,18 @@ impl GreedySolver {
 }
 
 impl Solver for GreedySolver {
-    fn solve<Grid, Placement>(&self, grid: &Grid) -> Result<Placement, SolverError>
+    fn solve<T, U>(&self, grid: &T) -> Result<U, SolverError>
     where
-        Grid: Index<GridIdx, Output = Option<GridValue>>,
-        Placement: FromIterator<(GridIdx, GridValue)>,
+        T: Grid + ?Sized,
+        U: FromIterator<GridDiff>,
     {
-        let mut cur: PlainGrid = copy_into(grid);
-        // TODO(kostya): remove debugging
-        let tmp: PlainGrid = copy_into(grid);
-        let complete = {
-            let mut state = Box::new(SolverState::of_grid(&cur));
-            state
-                .stack
-                .with(|stack, frame| solve_rec(stack, frame, &mut cur, &mut state.constraints))
-        };
-        if complete {
-            Ok(IIdx::iter()
-                .cartesian_product(JIdx::iter())
-                .filter(|idx| grid[*idx].is_none())
-                .map(|idx| {
-                    (
-                        idx,
-                        cur[idx].unwrap_or_else(|| panic!("{idx:?}\n{tmp:?}\n\n{cur:?}")),
-                    )
-                })
-                .collect::<Placement>())
+        let mut mem = Box::new((PlainGrid::copy_of(grid), SolverState::of_grid(&grid)));
+        if mem
+            .1
+            .stack
+            .with(|stack, frame| solve_rec(stack, frame, &mut mem.0, &mut mem.1.constraints))
+        {
+            grid.diff(mem.0).collect::<U>()
         } else {
             Err(SolverError)
         }

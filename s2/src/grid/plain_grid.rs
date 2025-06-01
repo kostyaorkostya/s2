@@ -1,5 +1,4 @@
 use super::{GridIdx, GridValue};
-use crate::format;
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 

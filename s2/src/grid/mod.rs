@@ -287,7 +287,7 @@ impl From<GridValue> for usize {
 
 impl std::fmt::Display for GridValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = self.into_ascii() as char;
+        let x: char = self.into_ascii().into();
         write!(f, "{x}")
     }
 }

@@ -512,6 +512,15 @@ pub trait GridMutWithDefault: GridMut + Default {
         dst.set_from_iter(iter);
         dst
     }
+
+    fn from_fn<F>(f: F) -> Self
+    where
+        F: Fn(GridIdx) -> Option<GridValue>,
+    {
+        let mut dst: Self = Default::default();
+        GridIdx::iter_row_wise().for_each(|idx| dst[idx] = f(idx));
+        dst
+    }
 }
 
 pub fn eq<T, U>(this: &T, other: &U) -> bool

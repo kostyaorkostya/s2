@@ -52,7 +52,6 @@ where
 
 impl std::fmt::Debug for PlainGrid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = format::write_string(&format::RowMajorAscii::default(), self);
-        f.write_str(&s)
+        super::fmt(self, f)
     }
 }

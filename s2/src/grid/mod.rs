@@ -528,3 +528,11 @@ where
         .next()
         .unwrap_or(Ordering::Equal)
 }
+
+pub fn fmt<T>(this: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+where
+    T: Grid,
+{
+    let s = crate::format::write_string(&crate::format::RowMajorAscii::default(), this);
+    f.write_str(&s)
+}

@@ -1,23 +1,40 @@
-use super::{to_row_major, GridIdx, GridValue, IIdx, JIdx};
+use super::{GridIdx, GridValue};
 use crate::format;
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
-use strum::EnumCount;
 
 #[derive(Clone, Copy)]
-pub struct PlainGrid([Option<GridValue>; IIdx::COUNT * JIdx::COUNT]);
+pub struct PlainGrid([Option<GridValue>; GridIdx::COUNT]);
+
+impl Default for PlainGrid {
+    fn default() -> Self {
+        Self([None; GridIdx::COUNT])
+    }
+}
 
 impl Index<GridIdx> for PlainGrid {
     type Output = Option<GridValue>;
 
     fn index(&self, idx: GridIdx) -> &Self::Output {
-        &self.0[to_row_major(idx)]
+        &self.0[idx.row_major()]
     }
 }
 
+impl IndexMut<GridIdx> for PlainGrid {
+    fn index_mut(&mut self, idx: GridIdx) -> &mut Self::Output {
+        &mut self.0[idx.row_major()]
+    }
+}
+
+impl super::Grid for PlainGrid {}
+
+impl super::GridMut for PlainGrid {}
+
+impl super::GridMutWithDefault for PlainGrid {}
+
 impl<T> PartialEq<T> for PlainGrid
 where
-    T: Index<GridIdx, Output = Option<GridValue>>,
+    T: super::Grid,
 {
     fn eq(&self, other: &T) -> bool {
         super::eq(self, other)
@@ -26,16 +43,10 @@ where
 
 impl<T> PartialOrd<T> for PlainGrid
 where
-    T: Index<GridIdx, Output = Option<GridValue>>,
+    T: super::Grid,
 {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
-        super::partial_cmp(self, other)
-    }
-}
-
-impl IndexMut<GridIdx> for PlainGrid {
-    fn index_mut(&mut self, idx: GridIdx) -> &mut Self::Output {
-        &mut self.0[to_row_major(idx)]
+        Some(super::cmp(self, other))
     }
 }
 
@@ -43,24 +54,5 @@ impl std::fmt::Debug for PlainGrid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = format::write_string(&format::RowMajorAscii::default(), self);
         f.write_str(&s)
-    }
-}
-
-impl PlainGrid {
-    pub fn new<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = (GridIdx, GridValue)>,
-    {
-        let mut res = PlainGrid([None; IIdx::COUNT * JIdx::COUNT]);
-        for (idx, value) in iter {
-            res[idx] = Some(value)
-        }
-        res
-    }
-}
-
-impl Default for PlainGrid {
-    fn default() -> Self {
-        Self::new(std::iter::empty())
     }
 }

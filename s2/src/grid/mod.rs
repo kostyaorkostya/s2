@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use std::cmp::Ordering;
 use std::convert::{Into, TryFrom};
+use std::iter::zip;
 use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
@@ -76,7 +77,7 @@ impl From<IIdx> for u8 {
 impl From<&IIdx> for usize {
     fn from(v: &IIdx) -> usize {
         let v: u8 = v.into();
-        v as usize
+        v.into()
     }
 }
 
@@ -154,7 +155,7 @@ impl From<JIdx> for u8 {
 impl From<&JIdx> for usize {
     fn from(v: &JIdx) -> usize {
         let v: u8 = v.into();
-        v as usize
+        v.into()
     }
 }
 
@@ -275,7 +276,7 @@ impl From<GridValue> for u8 {
 impl From<&GridValue> for usize {
     fn from(v: &GridValue) -> usize {
         let v: u8 = v.into();
-        v as usize
+        v.into()
     }
 }
 
@@ -292,100 +293,238 @@ impl std::fmt::Display for GridValue {
     }
 }
 
-pub type GridIdx = (IIdx, JIdx);
-
-pub fn to_row_major(idx: GridIdx) -> usize {
-    let i: usize = idx.0.into();
-    let j: usize = idx.1.into();
-    i * IIdx::COUNT + j
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GridIdx {
+    i: IIdx,
+    j: JIdx,
 }
 
-pub fn try_of_row_major(idx: usize) -> Result<GridIdx, ()> {
-    let i: IIdx = (idx / IIdx::COUNT).try_into()?;
-    let j: JIdx = (idx % JIdx::COUNT).try_into()?;
-    Ok((i, j))
+impl From<&(IIdx, JIdx)> for GridIdx {
+    fn from(v: &(IIdx, JIdx)) -> Self {
+        Self {
+            i: v.0.clone(),
+            j: v.1.clone(),
+        }
+    }
 }
 
-pub fn of_row_major(idx: usize) -> GridIdx {
-    try_of_row_major(idx).unwrap()
+impl From<(IIdx, JIdx)> for GridIdx {
+    fn from(v: (IIdx, JIdx)) -> Self {
+        (&v).into()
+    }
 }
 
-pub fn to_col_major(idx: GridIdx) -> usize {
-    let i: usize = idx.0.into();
-    let j: usize = idx.1.into();
-    j * JIdx::COUNT + i
+impl From<(&IIdx, JIdx)> for GridIdx {
+    fn from(v: (&IIdx, JIdx)) -> Self {
+        Self {
+            i: v.0.clone(),
+            j: v.1,
+        }
+    }
 }
 
-pub fn try_of_col_major(idx: usize) -> Result<GridIdx, ()> {
-    let j: JIdx = (idx / JIdx::COUNT).try_into()?;
-    let i: IIdx = (idx % IIdx::COUNT).try_into()?;
-    Ok((i, j))
+impl From<(IIdx, &JIdx)> for GridIdx {
+    fn from(v: (IIdx, &JIdx)) -> Self {
+        Self {
+            i: v.0,
+            j: v.1.clone(),
+        }
+    }
 }
 
-pub fn copy<GridSrc, GridDst>(src: &GridSrc, dst: &mut GridDst)
-where
-    GridSrc: Index<GridIdx, Output = Option<GridValue>>,
-    GridDst: IndexMut<GridIdx, Output = Option<GridValue>>,
-{
-    IIdx::iter()
-        .cartesian_product(JIdx::iter())
-        .for_each(|idx| dst[idx] = src[idx]);
+impl From<&GridIdx> for (IIdx, JIdx) {
+    fn from(v: &GridIdx) -> Self {
+        (v.i.clone(), v.j.clone())
+    }
 }
 
-pub fn copy_into<GridSrc, GridDst>(src: &GridSrc) -> GridDst
-where
-    GridSrc: Index<GridIdx, Output = Option<GridValue>>,
-    GridDst: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
-{
-    let mut dst = GridDst::default();
-    copy(src, &mut dst);
-    dst
+impl From<GridIdx> for (IIdx, JIdx) {
+    fn from(v: GridIdx) -> Self {
+        (&v).into()
+    }
 }
 
-pub fn apply<Grid, Placement>(grid: &mut Grid, placement: Placement)
-where
-    Grid: IndexMut<GridIdx, Output = Option<GridValue>>,
-    Placement: Iterator<Item = (GridIdx, GridValue)>,
-{
-    placement.for_each(|(idx, value)| grid[idx] = Some(value))
+impl GridIdx {
+    const COUNT: usize = IIdx::COUNT * JIdx::COUNT;
+
+    fn row_major(&self) -> usize {
+        let i: usize = self.i.into();
+        let j: usize = self.j.into();
+        i * IIdx::COUNT + j
+    }
+
+    fn try_of_row_major(idx: usize) -> Result<Self, ()> {
+        let i: IIdx = (idx / IIdx::COUNT).try_into()?;
+        let j: JIdx = (idx % JIdx::COUNT).try_into()?;
+        Ok((i, j).into())
+    }
+
+    fn col_major(&self) -> usize {
+        let i: usize = self.i.into();
+        let j: usize = self.j.into();
+        j * JIdx::COUNT + i
+    }
+
+    fn try_of_col_major(idx: usize) -> Result<Self, ()> {
+        let j: JIdx = (idx / JIdx::COUNT).try_into()?;
+        let i: IIdx = (idx % IIdx::COUNT).try_into()?;
+        Ok((i, j).into())
+    }
+
+    fn iter_row_wise() -> impl Iterator<Item = Self> {
+        IIdx::iter().cartesian_product(JIdx::iter()).map(Into::into)
+    }
+
+    fn iter_col_wise() -> impl Iterator<Item = Self> {
+        JIdx::iter()
+            .cartesian_product(IIdx::iter())
+            .map(|(j, i)| (i, j))
+            .map(Into::into)
+    }
 }
 
-pub fn copy_and_apply<GridSrc, GridDst, Placement>(src: &GridSrc, placement: Placement) -> GridDst
-where
-    GridSrc: Index<GridIdx, Output = Option<GridValue>>,
-    GridDst: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
-    Placement: Iterator<Item = (GridIdx, GridValue)>,
-{
-    let mut dst = GridDst::default();
-    copy(src, &mut dst);
-    apply(&mut dst, placement);
-    dst
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum GridDiff {
+    Set(GridIdx, GridValue),
+    Unset(GridIdx),
 }
 
-pub fn eq<T, U>(this: &T, other: &U) -> bool
-where
-    T: Index<GridIdx, Output = Option<GridValue>>,
-    U: Index<GridIdx, Output = Option<GridValue>>,
-{
-    IIdx::iter()
-        .cartesian_product(JIdx::iter())
-        .all(|idx| this[idx] == other[idx])
+pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
+    fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        GridIdx::iter_row_wise().map(|idx| (idx, self[idx].clone()))
+    }
+
+    fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        GridIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
+    }
+
+    fn iter_values_row_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
+        GridIdx::iter_row_wise().map(|idx| self[idx].clone())
+    }
+
+    fn iter_values_col_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
+        GridIdx::iter_col_wise().map(|idx| self[idx].clone())
+    }
+
+    fn iter_set_row_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
+        GridIdx::iter_row_wise().filter_map(|idx| Some((idx, self[idx]?.clone())))
+    }
+
+    fn iter_set_col_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
+        GridIdx::iter_col_wise().filter_map(|idx| Some((idx, self[idx]?.clone())))
+    }
+
+    fn iter_unset_row_wise(&self) -> impl Iterator<Item = GridIdx> {
+        GridIdx::iter_row_wise().filter(|idx| self[*idx].is_none())
+    }
+
+    fn iter_unset_col_wise(&self) -> impl Iterator<Item = GridIdx> {
+        GridIdx::iter_col_wise().filter(|idx| self[*idx].is_none())
+    }
+
+    fn diff<T>(&self, other: &T) -> impl Iterator<Item = GridDiff>
+    where
+        T: Grid + ?Sized,
+    {
+        zip(self.iter_row_wise(), other.iter_row_wise()).filter_map(|((idx, this), (_, other))| {
+            match (this, other) {
+                (None, None) => None,
+                (None | Some(_), Some(x)) => Some(GridDiff::Set(idx, x)),
+                (Some(_), None) => Some(GridDiff::Unset(idx)),
+            }
+        })
+    }
+
+    fn copy_into<T>(&self) -> T
+    where
+        T: Grid + IndexMut<GridIdx, Output = Option<GridValue>> + Default + Sized,
+    {
+        let mut dst = T::default();
+        self.iter_row_wise()
+            .for_each(|(idx, value)| dst[idx] = value);
+        dst
+    }
 }
 
-pub fn partial_cmp<T, U>(this: &T, other: &U) -> Option<std::cmp::Ordering>
-where
-    T: Index<GridIdx, Output = Option<GridValue>>,
-    U: Index<GridIdx, Output = Option<GridValue>>,
-{
-    for i in IIdx::iter() {
-        for j in JIdx::iter() {
-            match this[(i, j)].partial_cmp(&other[(i, j)]) {
-                None => return None,
-                Some(Ordering::Equal) => continue,
-                res @ Some(_) => return res,
+pub trait GridMut: Grid + IndexMut<GridIdx, Output = Option<GridValue>> {
+    fn clear(&mut self) {
+        self.unset_from_iter(GridIdx::iter_row_wise())
+    }
+
+    fn apply_diff<T>(&mut self, diff: T)
+    where
+        T: Iterator<Item = GridDiff>,
+    {
+        for diff in diff {
+            match diff {
+                GridDiff::Set(idx, value) => self[idx] = Some(value),
+                GridDiff::Unset(idx) => self[idx] = None,
             }
         }
     }
 
-    Some(Ordering::Equal)
+    fn set_from_iter<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        iter.for_each(|(idx, value)| self[idx] = Some(value))
+    }
+
+    fn unset_from_iter<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = GridIdx>,
+    {
+        iter.for_each(|idx| self[idx] = None)
+    }
+
+    fn assign<T>(&mut self, src: &T)
+    where
+        T: Index<GridIdx, Output = Option<GridValue>> + ?Sized,
+    {
+        GridIdx::iter_row_wise().for_each(|idx| self[idx] = src[idx])
+    }
+}
+
+pub trait GridMutWithDefault: GridMut + Default {
+    fn with_diff<T, I>(src: &T, diff: I) -> Self
+    where
+        T: Grid + ?Sized,
+        I: Iterator<Item = GridDiff>,
+    {
+        let mut dst: Self = src.copy_into();
+        dst.apply_diff(diff);
+        dst
+    }
+
+    fn of_set<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        let mut dst: Self = Default::default();
+        dst.set_from_iter(iter);
+        dst
+    }
+}
+
+pub fn eq<T, U>(this: &T, other: &U) -> bool
+where
+    T: Grid,
+    U: Grid,
+{
+    zip(this.iter_values_row_wise(), other.iter_values_row_wise())
+        .all(|(this, other)| this == other)
+}
+
+pub fn cmp<T, U>(this: &T, other: &U) -> Ordering
+where
+    T: Grid,
+    U: Grid,
+{
+    zip(this.iter_values_row_wise(), other.iter_values_row_wise())
+        .filter_map(|(this, other)| match this.cmp(&other) {
+            Ordering::Equal => None,
+            res @ (Ordering::Less | Ordering::Greater) => Some(res),
+        })
+        .next()
+        .unwrap_or(Ordering::Equal)
 }

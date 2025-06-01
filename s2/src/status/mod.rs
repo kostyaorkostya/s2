@@ -57,7 +57,10 @@ impl IndexMut<GridValue> for Counter {
 }
 
 impl std::iter::FromIterator<Option<GridValue>> for Counter {
-    fn from_iter<I: IntoIterator<Item = Option<GridValue>>>(iter: I) -> Self {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Option<GridValue>>,
+    {
         let mut counter = Self::new();
         for grid_value in iter {
             match grid_value {
@@ -94,7 +97,7 @@ where
     let rows = IIdx::iter()
         .map(|i| {
             zip(repeat(i), JIdx::iter())
-                .map(|x| grid[x])
+                .map(|idx| grid[idx.into()])
                 .collect::<Counter>()
                 .eval_status()
                 .map(Into::into)
@@ -103,7 +106,7 @@ where
     let cols = JIdx::iter()
         .map(|j| {
             zip(IIdx::iter(), repeat(j))
-                .map(|x| grid[x])
+                .map(|idx| grid[idx.into()])
                 .collect::<Counter>()
                 .eval_status()
                 .map(Into::into)
@@ -116,11 +119,11 @@ where
                 .cartesian_product(0..3)
                 .map(|(i_in_subgrid, j_in_subgrid)| {
                     (
-                        (i_subgrid * 3 + i_in_subgrid).try_into().unwrap(),
-                        (j_subgrid * 3 + j_in_subgrid).try_into().unwrap(),
+                        IIdx::try_from(i_subgrid * 3 + i_in_subgrid).unwrap(),
+                        JIdx::try_from(j_subgrid * 3 + j_in_subgrid).unwrap(),
                     )
                 })
-                .map(|x| grid[x])
+                .map(|idx| grid[idx.into()])
                 .collect::<Counter>()
                 .eval_status()
                 .map(Into::into)

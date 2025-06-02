@@ -1,8 +1,7 @@
 use super::{Solver, SolverError};
-use crate::grid::{Grid, GridDiff, GridIdx, GridMut, GridValue, IIdx, JIdx, PlainGrid};
-use itertools::Itertools;
-use std::ops::{BitOr, Index};
-use strum::{EnumCount, IntoEnumIterator};
+use crate::grid::{Grid, GridDiff, GridIdx, GridMutWithDefault, GridValue, PlainGrid};
+use std::ops::BitOr;
+use strum::EnumCount;
 use tinyvec::ArrayVec;
 
 #[derive(Debug, Default)]
@@ -265,7 +264,7 @@ impl Solver for GreedySolver {
             .stack
             .with(|stack, frame| solve_rec(stack, frame, &mut mem.0, &mut mem.1.constraints))
         {
-            Ok(grid.diff(mem.0).collect::<U>())
+            Ok(grid.diff(&mem.0).collect::<U>())
         } else {
             Err(SolverError)
         }

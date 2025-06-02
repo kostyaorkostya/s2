@@ -259,13 +259,13 @@ impl Solver for GreedySolver {
         T: Grid + ?Sized,
         U: FromIterator<GridDiff>,
     {
-        let mut mem = Box::new((PlainGrid::copy_of(grid), SolverState::of_grid(&grid)));
+        let mut mem = Box::new((PlainGrid::copy_of(grid), SolverState::of_grid(grid)));
         if mem
             .1
             .stack
             .with(|stack, frame| solve_rec(stack, frame, &mut mem.0, &mut mem.1.constraints))
         {
-            grid.diff(mem.0).collect::<U>()
+            Ok(grid.diff(mem.0).collect::<U>())
         } else {
             Err(SolverError)
         }

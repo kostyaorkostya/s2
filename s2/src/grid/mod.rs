@@ -539,7 +539,7 @@ pub trait GridMutWithDefault: GridMut + Default {
 
     fn copy_of<T>(other: &T) -> Self
     where
-        T: Grid,
+        T: Grid + ?Sized,
     {
         other.copy_into()
     }

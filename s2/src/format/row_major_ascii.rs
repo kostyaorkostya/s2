@@ -1,10 +1,8 @@
 use super::{ReadFormatter, WriteFormatter};
-use crate::grid::{of_row_major, GridIdx, GridValue, IIdx, JIdx};
-use itertools::Itertools;
+use crate::grid::{Grid, GridIdx, GridMut, GridValue, IIdx, JIdx};
 use std::io::{Read, Write};
-use std::ops::{Index, IndexMut};
 use std::slice;
-use strum::{EnumCount, IntoEnumIterator};
+use strum::EnumCount;
 
 #[derive(Debug)]
 pub struct RowMajorAscii {
@@ -32,8 +30,8 @@ impl<'a> RowMajorAsciiReadState<'a> {
     }
 
     fn inc(&mut self) {
-        let idx = of_row_major(self.row_major_idx);
-        if idx.0 < IIdx::I8 && idx.1 == JIdx::J8 {
+        let idx = GridIdx::try_of_row_major(self.row_major_idx).unwrap();
+        if idx.i < IIdx::I8 && idx.j == JIdx::J8 {
             self.row_sep_expected = self.formatter.row_sep.is_some();
         };
         self.row_major_idx += 1;
@@ -59,14 +57,14 @@ impl ReadFormatter for RowMajorAscii {
     fn read<R, G>(&self, reader: &mut R, grid: &mut G) -> Result<(), Self::ReadError>
     where
         R: Read,
-        G: IndexMut<GridIdx, Output = Option<GridValue>>,
+        G: GridMut + ?Sized,
     {
         let mut state = RowMajorAsciiReadState::new(self);
         let is_cell = |c: u8| c.is_ascii_digit() && c != b'0';
         let is_empty = |c: u8| c == self.empty_cell;
         let is_row_sep = |c: u8| self.row_sep == Some(c);
         loop {
-            let idx = of_row_major(state.row_major_idx);
+            let idx = GridIdx::try_of_row_major(state.row_major_idx).unwrap();
             let mut c = 0;
             match reader.read_exact(slice::from_mut(&mut c)) {
                 Err(_) => return Err(()),
@@ -104,22 +102,20 @@ impl ReadFormatter for RowMajorAscii {
 impl WriteFormatter for RowMajorAscii {
     fn write<G, W>(&self, grid: &G, writer: &mut W) -> std::io::Result<usize>
     where
-        G: Index<GridIdx, Output = Option<GridValue>>,
+        G: Grid + ?Sized,
         W: Write,
     {
-        IIdx::iter()
-            .cartesian_product(JIdx::iter())
-            .try_fold(0, |res, idx| {
-                let cell = grid[idx].map(|x| x.into_ascii()).unwrap_or(self.empty_cell);
-                let cell = writer.write(slice::from_ref(&cell))?;
-                let row_sep = if idx.0 != IIdx::I8 && idx.1 == JIdx::J8 {
-                    self.row_sep
-                        .map_or(Ok(0), |x| writer.write(slice::from_ref(&x)))
-                } else {
-                    Ok(0)
-                }?;
-                Ok(res + cell + row_sep)
-            })
+        GridIdx::iter_row_wise().try_fold(0, |res, idx| {
+            let cell = grid[idx].map(|x| x.into_ascii()).unwrap_or(self.empty_cell);
+            let cell = writer.write(slice::from_ref(&cell))?;
+            let row_sep = if idx.i != IIdx::I8 && idx.j == JIdx::J8 {
+                self.row_sep
+                    .map_or(Ok(0), |x| writer.write(slice::from_ref(&x)))
+            } else {
+                Ok(0)
+            }?;
+            Ok(res + cell + row_sep)
+        })
     }
 }
 

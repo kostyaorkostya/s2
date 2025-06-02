@@ -8,6 +8,8 @@ use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 
 mod plain_grid;
 pub use plain_grid::PlainGrid;
+mod arr_grid;
+pub use arr_grid::{ArrGridColMajor, ArrGridRowMajor};
 
 #[derive(
     Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,

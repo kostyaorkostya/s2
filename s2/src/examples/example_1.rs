@@ -1,5 +1,5 @@
 use s2::format::{read_from_string, RowMajorAscii};
-use s2::grid::{copy_and_apply, PlainGrid};
+use s2::grid::{GridMutWithDefault, PlainGrid};
 use s2::solver::{GreedySolver, Solver};
 use s2::status::eval_status;
 
@@ -23,7 +23,7 @@ fn main() {
     let grid = create_grid();
     println!("{grid:?}");
     println!("{:?}", eval_status(&grid));
-    let complete = copy_and_apply::<_, PlainGrid, _>(
+    let complete = PlainGrid::with_diff(
         &grid,
         GreedySolver::new()
             .solve::<_, Vec<_>>(&grid)

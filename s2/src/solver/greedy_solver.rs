@@ -275,7 +275,7 @@ impl Solver for GreedySolver {
 mod greedy_solver_test {
     use super::{GreedySolver, Solver, SolverError};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
-    use crate::grid::{copy_and_apply, PlainGrid};
+    use crate::grid::{GridMutWithDefault, PlainGrid};
 
     #[test]
     fn test_feasible() {
@@ -306,7 +306,7 @@ ____8__79
         let given: PlainGrid = read_from_string(&RowMajorAscii::default(), given).unwrap();
         let complete = write_string(
             &RowMajorAscii::default(),
-            &copy_and_apply::<_, PlainGrid, _>(
+            &PlainGrid::with_diff(
                 &given,
                 GreedySolver::new()
                     .solve::<_, Vec<_>>(&given)

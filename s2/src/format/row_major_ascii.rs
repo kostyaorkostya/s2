@@ -140,15 +140,14 @@ impl RowMajorAscii {
 mod row_major_ascii_test {
     use super::super::{read_from_string, write_string, ReadFormatter, WriteFormatter};
     use super::RowMajorAscii;
-    use crate::grid::{GridIdx, GridValue, PlainGrid};
-    use std::ops::{Index, IndexMut};
+    use crate::grid::{Grid, GridMutWithDefault, PlainGrid};
 
     fn grid_roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
     where
         F: WriteFormatter + ReadFormatter,
         F::ReadError: std::fmt::Debug,
-        Src: Index<GridIdx, Output = Option<GridValue>>,
-        Dst: IndexMut<GridIdx, Output = Option<GridValue>> + Default,
+        Src: Grid + ?Sized,
+        Dst: GridMutWithDefault,
     {
         let s = write_string(f, src);
         read_from_string(f, &s).unwrap()

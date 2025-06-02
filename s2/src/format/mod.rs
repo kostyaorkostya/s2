@@ -1,4 +1,4 @@
-use super::grid::{GridIdx, GridValue, IIdx, JIdx};
+use super::grid::{GridIdx, GridValue, IIdx};
 use std::io::{Cursor, Read, Write};
 use std::ops::{Index, IndexMut};
 use strum::EnumCount;
@@ -51,9 +51,7 @@ where
     F: WriteFormatter,
     G: Index<GridIdx, Output = Option<GridValue>>,
 {
-    let mut cursor = Cursor::new(Vec::with_capacity(
-        IIdx::COUNT * JIdx::COUNT + IIdx::COUNT - 1,
-    ));
+    let mut cursor = Cursor::new(Vec::with_capacity(GridIdx::COUNT + IIdx::COUNT - 1));
     f.write(grid, &mut cursor).unwrap();
     String::from_utf8(cursor.into_inner()).unwrap()
 }

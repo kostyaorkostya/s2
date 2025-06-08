@@ -102,12 +102,30 @@ impl Constraints {
         self.boxes.set((box_, value));
     }
 
+    fn set_many<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        for (idx, elt) in iter {
+            self.set(idx, elt)
+        }
+    }
+
     fn unset(&mut self, idx: GridIdx, value: GridValue) {
         let (i, j, box_) = Self::constraint_indices(idx);
         let value: u8 = value.into();
         self.rows.unset((i, value));
         self.cols.unset((j, value));
         self.boxes.unset((box_, value));
+    }
+
+    fn unset_many<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        for (idx, elt) in iter {
+            self.unset(idx, elt)
+        }
     }
 
     fn domain_mask(&self, idx: GridIdx) -> Bits9 {
@@ -164,10 +182,12 @@ impl SolverStack {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct SolverState {
     stack: SolverStack,
+    grid: ArrGridRowMajor,
     constraints: Constraints,
+    diff: ArrayVec<[(GridIdx, GridValue); GridIdx::COUNT]>,
 }
 
 impl SolverState {
@@ -176,8 +196,9 @@ impl SolverState {
         T: Grid + ?Sized,
     {
         Self {
-            stack: Default::default(),
+            grid: ArrGridRowMajor::copy_of(grid),
             constraints: Constraints::of_grid(grid),
+            ..Default::default()
         }
     }
 }
@@ -212,10 +233,12 @@ fn solve_rec<G>(
     frame: &mut SolverStackFrame,
     cur: &mut G,
     constraints: &mut Constraints,
+    diff: &mut ArrayVec<[(GridIdx, GridValue); GridIdx::COUNT]>,
 ) -> bool
 where
     G: GridMut,
 {
+    let diff_size_before = diff.len();
     frame.empty_cells.extend(
         cur.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
@@ -233,13 +256,21 @@ where
                 frame.domain.clear();
                 constraints.domain(*idx, &mut frame.domain);
                 for value in frame.domain {
-                    cur[*idx] = Some(value);
-                    constraints.set(*idx, value);
-                    if stack.with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints)) {
+                    diff.push((*idx, value));
+                    cur.set_from_iter(diff[diff_size_before..].iter().copied());
+                    constraints.set_many(diff[diff_size_before..].iter().copied());
+                    if stack
+                        .with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints, diff))
+                    {
                         return Some(true);
                     } else {
-                        constraints.unset(*idx, value);
-                        cur[*idx] = None;
+                        constraints.unset_many(diff[diff_size_before..].iter().copied());
+                        cur.unset_from_iter(
+                            diff[diff_size_before..].iter().map(|(idx, _)| idx).copied(),
+                        );
+                        (0..diff_size_before).for_each(|_| {
+                            let _ = diff.pop();
+                        });
                     }
                 }
                 None
@@ -263,13 +294,21 @@ impl Solver for GreedySolver {
         T: Grid + ?Sized,
         U: FromIterator<GridDiff>,
     {
-        let mut mem = Box::new((ArrGridRowMajor::copy_of(grid), SolverState::of_grid(grid)));
-        if mem
-            .1
-            .stack
-            .with(|stack, frame| solve_rec(stack, frame, &mut mem.0, &mut mem.1.constraints))
-        {
-            Ok(grid.diff(&mem.0).collect::<U>())
+        let mut mem = Box::new(SolverState::of_grid(grid));
+        if mem.stack.with(|stack, frame| {
+            solve_rec(
+                stack,
+                frame,
+                &mut mem.grid,
+                &mut mem.constraints,
+                &mut mem.diff,
+            )
+        }) {
+            Ok(mem
+                .diff
+                .iter()
+                .map(|(idx, value)| GridDiff::Set(*idx, *value))
+                .collect::<U>())
         } else {
             Err(SolverError)
         }

@@ -38,45 +38,54 @@ impl<const ROW_MAJOR: bool> IndexMut<GridIdx> for ArrGrid<ROW_MAJOR> {
     }
 }
 
-impl<const ROW_MAJOR: bool> super::Grid for ArrGrid<ROW_MAJOR> {
+impl super::Grid for ArrGrid<true> {
     fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        if ROW_MAJOR {
-            self.0
-                .iter()
-                .enumerate()
-                .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
-        } else {
-            GridIdx::iter_row_wise().map(|idx| (idx, self[idx].clone()))
-        }
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
     }
 
     fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        if ROW_MAJOR {
-            GridIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
-        } else {
-            self.0
-                .iter()
-                .enumerate()
-                .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
-        }
+        GridIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
     }
 
     fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        if ROW_MAJOR {
-            self.iter_row_wise()
-        } else {
-            self.iter_col_wise()
-        }
+        self.iter_row_wise()
     }
 }
 
-impl<const ROW_MAJOR: bool> super::GridMut for ArrGrid<ROW_MAJOR> {}
+impl super::Grid for ArrGrid<false> {
+    fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        GridIdx::iter_row_wise().map(|idx| (idx, self[idx].clone()))
+    }
 
-impl<const ROW_MAJOR: bool> super::GridMutWithDefault for ArrGrid<ROW_MAJOR> {}
+    fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+        self.iter_col_wise()
+    }
+}
+
+impl<const ROW_MAJOR: bool> super::GridMut for ArrGrid<ROW_MAJOR> where
+    ArrGrid<ROW_MAJOR>: super::Grid
+{
+}
+
+impl<const ROW_MAJOR: bool> super::GridMutWithDefault for ArrGrid<ROW_MAJOR> where
+    ArrGrid<ROW_MAJOR>: super::Grid
+{
+}
 
 impl<const ROW_MAJOR: bool, T> PartialEq<T> for ArrGrid<ROW_MAJOR>
 where
     T: super::Grid,
+    ArrGrid<ROW_MAJOR>: super::Grid,
 {
     fn eq(&self, other: &T) -> bool {
         super::eq(self, other)
@@ -86,13 +95,17 @@ where
 impl<const ROW_MAJOR: bool, T> PartialOrd<T> for ArrGrid<ROW_MAJOR>
 where
     T: super::Grid,
+    ArrGrid<ROW_MAJOR>: super::Grid,
 {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
         Some(super::cmp(self, other))
     }
 }
 
-impl<const ROW_MAJOR: bool> std::fmt::Debug for ArrGrid<ROW_MAJOR> {
+impl<const ROW_MAJOR: bool> std::fmt::Debug for ArrGrid<ROW_MAJOR>
+where
+    ArrGrid<ROW_MAJOR>: super::Grid,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         super::fmt(self, f)
     }

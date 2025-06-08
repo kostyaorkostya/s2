@@ -140,7 +140,7 @@ impl RowMajorAscii {
 mod row_major_ascii_test {
     use super::super::{read_from_string, write_string, ReadFormatter, WriteFormatter};
     use super::RowMajorAscii;
-    use crate::grid::{Grid, GridMutWithDefault, PlainGrid};
+    use crate::grid::{ArrGridRowMajor, Grid, GridMutWithDefault};
 
     fn grid_roundtrip<F, Src, Dst>(f: &F, src: &Src) -> Dst
     where
@@ -158,7 +158,7 @@ mod row_major_ascii_test {
         F: WriteFormatter + ReadFormatter,
         F::ReadError: std::fmt::Debug,
     {
-        let s: PlainGrid = read_from_string(f, s).unwrap();
+        let s: ArrGridRowMajor = read_from_string(f, s).unwrap();
         write_string(f, &s)
     }
 
@@ -177,7 +177,7 @@ _________
 "#
         .trim();
         let f = RowMajorAscii::default();
-        let grid = PlainGrid::default();
+        let grid = ArrGridRowMajor::default();
         let actual = write_string(&f, &grid);
         assert_eq!(&expected, &actual);
     }
@@ -185,8 +185,8 @@ _________
     #[test]
     fn test_empty_grid_roundtrip() {
         let f = RowMajorAscii::default();
-        let src = PlainGrid::default();
-        let dst: PlainGrid = grid_roundtrip(&f, &src);
+        let src = ArrGridRowMajor::default();
+        let dst: ArrGridRowMajor = grid_roundtrip(&f, &src);
         assert_eq!(&src, &dst);
     }
 

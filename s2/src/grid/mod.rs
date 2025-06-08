@@ -6,8 +6,6 @@ use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 
-mod plain_grid;
-pub use plain_grid::PlainGrid;
 mod arr_grid;
 pub use arr_grid::{ArrGridColMajor, ArrGridRowMajor};
 

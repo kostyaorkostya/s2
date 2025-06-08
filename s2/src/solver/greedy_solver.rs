@@ -1,5 +1,7 @@
 use super::{Solver, SolverError};
-use crate::grid::{Grid, GridDiff, GridIdx, GridMutWithDefault, GridValue, PlainGrid};
+use crate::grid::{
+    ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
+};
 use std::ops::BitOr;
 use strum::EnumCount;
 use tinyvec::ArrayVec;
@@ -205,12 +207,15 @@ impl<'caller> SolverStackTail<'caller> {
     }
 }
 
-fn solve_rec(
+fn solve_rec<G>(
     stack: &mut SolverStackTail<'_>,
     frame: &mut SolverStackFrame,
-    cur: &mut PlainGrid,
+    cur: &mut G,
     constraints: &mut Constraints,
-) -> bool {
+) -> bool
+where
+    G: GridMut,
+{
     frame.empty_cells.extend(
         cur.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
@@ -258,7 +263,7 @@ impl Solver for GreedySolver {
         T: Grid + ?Sized,
         U: FromIterator<GridDiff>,
     {
-        let mut mem = Box::new((PlainGrid::copy_of(grid), SolverState::of_grid(grid)));
+        let mut mem = Box::new((ArrGridRowMajor::copy_of(grid), SolverState::of_grid(grid)));
         if mem
             .1
             .stack
@@ -275,7 +280,7 @@ impl Solver for GreedySolver {
 mod greedy_solver_test {
     use super::{GreedySolver, Solver, SolverError};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
-    use crate::grid::{GridMutWithDefault, PlainGrid};
+    use crate::grid::{ArrGridRowMajor, GridMutWithDefault};
 
     #[test]
     fn test_feasible() {
@@ -303,10 +308,10 @@ ____8__79
 345286179
 "#
         .trim();
-        let given: PlainGrid = read_from_string(&RowMajorAscii::default(), given).unwrap();
+        let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
         let complete = write_string(
             &RowMajorAscii::default(),
-            &PlainGrid::with_diff(
+            &ArrGridRowMajor::with_diff(
                 &given,
                 GreedySolver::new()
                     .solve::<_, Vec<_>>(&given)
@@ -331,7 +336,7 @@ ___456___
 _4_8_____
 "#
         .trim();
-        let given: PlainGrid = read_from_string(&RowMajorAscii::default(), given).unwrap();
+        let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
         let solution = GreedySolver::new().solve::<_, Vec<_>>(&given);
         assert_eq!(solution, Err(SolverError));
     }

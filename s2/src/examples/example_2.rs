@@ -1,9 +1,9 @@
 use s2::format::{read_from_string, RowMajorAscii};
-use s2::grid::{GridMutWithDefault, PlainGrid};
+use s2::grid::{ArrGridRowMajor, GridMutWithDefault};
 use s2::solver::{GreedySolver, Solver};
 use s2::status::eval_status;
 
-fn create_grid() -> PlainGrid {
+fn create_grid() -> ArrGridRowMajor {
     let grid = r#"
 _271_5___
 15__34___
@@ -23,7 +23,7 @@ fn main() {
     let grid = create_grid();
     println!("{grid:?}");
     println!("{:?}", eval_status(&grid));
-    let complete = PlainGrid::with_diff(
+    let complete = ArrGridRowMajor::with_diff(
         &grid,
         GreedySolver::new()
             .solve::<_, Vec<_>>(&grid)

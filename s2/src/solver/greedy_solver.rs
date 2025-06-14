@@ -187,9 +187,7 @@ impl EmptyCellsByDomainSize {
     where
         I: Iterator<Item = (GridIdx, u8)>,
     {
-        for (idx, domain_size) in iter {
-            self.0[usize::from(domain_size)].push(idx);
-        }
+        iter.for_each(|(idx, domain_size)| self.0[usize::from(domain_size)].push(idx))
     }
 
     fn iter(&self) -> impl Iterator<Item = &GridIdx> + '_ {

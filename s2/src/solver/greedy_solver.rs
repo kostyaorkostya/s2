@@ -437,7 +437,7 @@ impl Solver for GreedySolver {
         U: FromIterator<GridDiff>,
     {
         // TODO(kostya): check for validity
-        let mut cancellation_token: RateLimitedCancellationToken<'_, { 1u64 << 20 }, _> =
+        let mut cancellation_token: RateLimitedCancellationToken<'_, { 1u64 << 10 }, _> =
             RateLimitedCancellationToken::new(cancellation_token);
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = SolverStackTail::from(&mut mem.stack)

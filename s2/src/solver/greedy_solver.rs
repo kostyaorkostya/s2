@@ -174,12 +174,28 @@ impl Default for SolverStack {
     }
 }
 
-impl SolverStack {
+struct SolverStackTail<'a>(&'a mut [SolverStackFrame]);
+
+impl<'a> From<&'a mut [SolverStackFrame]> for SolverStackTail<'a> {
+    fn from(slice: &'a mut [SolverStackFrame]) -> Self {
+        Self(slice)
+    }
+}
+
+impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
+    fn from(stack: &'a mut SolverStack) -> Self {
+        Self(&mut stack.0[..])
+    }
+}
+
+impl<'caller> SolverStackTail<'caller> {
     fn with<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut SolverStackFrame, &mut SolverStackTail<'_>) -> R,
     {
-        SolverStackTail::from(self).with(f)
+        let (frame, tail) = self.0.split_first_mut().unwrap();
+        frame.clear();
+        f(frame, &mut tail.into())
     }
 }
 
@@ -259,31 +275,6 @@ impl SolverState {
     }
 }
 
-struct SolverStackTail<'a>(&'a mut [SolverStackFrame]);
-
-impl<'a> From<&'a mut [SolverStackFrame]> for SolverStackTail<'a> {
-    fn from(slice: &'a mut [SolverStackFrame]) -> Self {
-        Self(slice)
-    }
-}
-
-impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
-    fn from(stack: &'a mut SolverStack) -> Self {
-        Self(&mut stack.0[..])
-    }
-}
-
-impl<'caller> SolverStackTail<'caller> {
-    fn with<F, R>(&mut self, f: F) -> R
-    where
-        F: FnOnce(&mut SolverStackFrame, &mut SolverStackTail<'_>) -> R,
-    {
-        let (frame, tail) = self.0.split_first_mut().unwrap();
-        frame.clear();
-        f(frame, &mut tail.into())
-    }
-}
-
 fn solve<G>(
     stack: &mut SolverStackTail<'_>,
     frame: &mut SolverStackFrame,
@@ -352,7 +343,7 @@ impl Solver for GreedySolver {
         U: FromIterator<GridDiff>,
     {
         let mut mem = Box::new(SolverState::of_grid(grid));
-        let len = mem.stack.with(|frame, stack| {
+        let len = SolverStackTail::from(&mut mem.stack).with(|frame, stack| {
             solve(
                 stack,
                 frame,

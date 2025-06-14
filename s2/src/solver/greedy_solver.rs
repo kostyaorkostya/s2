@@ -2,12 +2,13 @@ use super::{Solver, SolverError};
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
+use bit_iter::BitIter;
 use std::iter::{once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
 use tinyvec::ArrayVec;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Copy, Clone)]
 struct Bits9(u16);
 
 impl Bits9 {
@@ -15,8 +16,8 @@ impl Bits9 {
         u16::from(self).count_zeros().try_into().unwrap()
     }
 
-    fn iter_zeros(&self) -> impl Iterator<Item = u8> + '_ {
-        (0..9u8).filter(move |&pos| (self.0 & (1u16 << pos)) == 0)
+    fn iter_zeros(&self) -> impl Iterator<Item = u8> + use<> {
+        BitIter::from(!self.0).map(|x| x as u8)
     }
 }
 
@@ -138,28 +139,40 @@ impl Constraints {
         self.domain_mask(idx).count_zeros()
     }
 
-    fn domain<E>(&self, idx: GridIdx, e: &mut E)
+    fn domain(&self, idx: GridIdx) -> impl Iterator<Item = GridValue> + use<> {
+        self.domain_mask(idx)
+            .iter_zeros()
+            .map(move |x| x.try_into().unwrap())
+    }
+}
+
+#[derive(Debug, Default)]
+struct Domain([GridValue; GridValue::COUNT]);
+
+impl Domain {
+    fn with<I, F, R>(&mut self, iter: I, f: F) -> R
     where
-        E: Extend<GridValue>,
+        I: Iterator<Item = GridValue>,
+        F: FnOnce(&[GridValue]) -> R,
     {
-        e.extend(
-            self.domain_mask(idx)
-                .iter_zeros()
-                .map(|x| x.try_into().unwrap()),
-        )
+        let mut cnt = 0;
+        for (arr_elt, elt) in zip(self.0.iter_mut(), iter) {
+            *arr_elt = elt;
+            cnt += 1;
+        }
+        f(&self.0[..cnt])
     }
 }
 
 #[derive(Debug, Default)]
 struct SolverStackFrame {
     empty_cells: ArrayVec<[(GridIdx, u8); GridIdx::COUNT]>,
-    domain: ArrayVec<[GridValue; GridValue::COUNT]>,
+    domain: Domain,
 }
 
 impl SolverStackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
-        self.domain.clear();
     }
 }
 
@@ -298,29 +311,28 @@ where
         empty_cells => empty_cells
             .iter()
             .map(|(idx, _)| {
-                frame.domain.clear();
-                constraints.domain(*idx, &mut frame.domain);
-                frame
-                    .domain
-                    .iter()
-                    .map(|value| {
-                        diff.with(once((*idx, *value)), |set, diff| {
-                            cur.set_from_iter(set.iter().copied());
-                            constraints.set_many(set.iter().copied());
-                            match stack
-                                .with(|frame, stack| solve(stack, frame, cur, constraints, diff))
-                            {
-                                ok @ Ok(_) => ok,
-                                err @ Err(_) => {
-                                    constraints.unset_many(set.iter().copied());
-                                    cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
-                                    err
+                frame.domain.with(constraints.domain(*idx), |domain| {
+                    domain
+                        .iter()
+                        .map(|value| {
+                            diff.with(once((*idx, *value)), |set, diff| {
+                                cur.set_from_iter(set.iter().copied());
+                                constraints.set_many(set.iter().copied());
+                                match stack.with(|frame, stack| {
+                                    solve(stack, frame, cur, constraints, diff)
+                                }) {
+                                    ok @ Ok(_) => ok,
+                                    err @ Err(_) => {
+                                        constraints.unset_many(set.iter().copied());
+                                        cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
+                                        err
+                                    }
                                 }
-                            }
+                            })
                         })
-                    })
-                    .find_map(Result::ok)
-                    .ok_or(SolverError)
+                        .find_map(Result::ok)
+                        .ok_or(SolverError)
+                })
             })
             .find_map(Result::ok)
             .ok_or(SolverError),

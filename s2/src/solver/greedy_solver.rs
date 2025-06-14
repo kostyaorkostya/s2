@@ -7,14 +7,16 @@ use bit_iter::BitIter;
 use std::iter::{empty, once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
-use tinyvec::ArrayVec;
+use tinyvec::{array_vec, ArrayVec};
 
 #[derive(Debug, Default, Copy, Clone)]
 struct Bits9(u16);
 
 impl Bits9 {
     fn count_zeros(&self) -> u8 {
-        u16::from(self).count_zeros().try_into().unwrap()
+        (u16::from(self).count_zeros() - (16 - 9))
+            .try_into()
+            .unwrap()
     }
 
     fn iter_zeros(&self) -> impl Iterator<Item = u8> + use<> {
@@ -165,9 +167,48 @@ impl Domain {
     }
 }
 
+#[derive(Debug)]
+struct EmptyCellsByDomainSize([ArrayVec<[GridIdx; GridIdx::COUNT]>; GridValue::COUNT]);
+
+impl Default for EmptyCellsByDomainSize {
+    fn default() -> Self {
+        Self(std::array::from_fn(|_| {
+            array_vec!([GridIdx; GridIdx::COUNT])
+        }))
+    }
+}
+
+impl EmptyCellsByDomainSize {
+    fn clear(&mut self) {
+        self.0.iter_mut().for_each(|x| x.clear());
+    }
+
+    fn insert<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, u8)>,
+    {
+        for (idx, domain_size) in iter {
+            self.0[usize::from(domain_size)].push(idx);
+        }
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &GridIdx> + '_ {
+        self.0.iter().flat_map(|row| row.iter())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.iter().all(ArrayVec::is_empty)
+    }
+
+    fn all_domains_are_empty(&self) -> bool {
+        let (zero_sized, non_zero_sized) = self.0[..].split_first().unwrap();
+        !zero_sized.is_empty() && non_zero_sized.iter().all(ArrayVec::is_empty)
+    }
+}
+
 #[derive(Debug, Default)]
 struct SolverStackFrame {
-    empty_cells: ArrayVec<[(GridIdx, u8); GridIdx::COUNT]>,
+    empty_cells: EmptyCellsByDomainSize,
     domain: Domain,
 }
 
@@ -292,6 +333,10 @@ where
         self.count += 1;
         self.count % RATE == 0 && self.cancellation_token.cancelled()
     }
+
+    fn never_ran(&self) -> bool {
+        self.count == 0
+    }
 }
 
 #[derive(Debug, Default)]
@@ -327,48 +372,48 @@ where
     C: CancellationToken,
     G: GridMut,
 {
-    if cancellation_token.cancelled() {
-        return Err(SolverError::Cancelled);
-    }
-    frame.empty_cells.extend(
+    frame.empty_cells.insert(
         cur.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
     );
-    // radix sort it? there are only 10 possible values to sort by
-    frame.empty_cells.sort_by_key(|(_, x)| *x);
 
-    match &frame.empty_cells[..] {
-        [] => Ok(0),
-        [(_, 0)] | [.., (_, 0)] => Err(SolverError::Infeasible),
-        empty_cells => empty_cells
-            .iter()
-            .map(|(idx, _)| {
-                frame.domain.with(constraints.domain(*idx), |domain| {
-                    domain
-                        .iter()
-                        .map(|value| {
-                            diff.with(once((*idx, *value)), |set, diff| {
-                                cur.set_from_iter(set.iter().copied());
-                                constraints.set_many(set.iter().copied());
-                                match stack.with(|frame, stack| {
-                                    solve(cancellation_token, frame, cur, constraints, stack, diff)
-                                }) {
-                                    ok @ Ok(_) => ok,
-                                    err @ Err(_) => {
-                                        constraints.unset_many(set.iter().copied());
-                                        cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
-                                        err
-                                    }
-                                }
-                            })
-                        })
-                        .find_map(SolverError::ok_or_cancelled)
-                        .ok_or(SolverError::Infeasible)?
-                })
-            })
-            .find_map(SolverError::ok_or_cancelled)
-            .ok_or(SolverError::Infeasible)?,
+    if frame.empty_cells.is_empty() {
+        return Ok(0);
+    } else if frame.empty_cells.all_domains_are_empty() {
+        return Err(SolverError::Infeasible);
+    } else if cancellation_token.cancelled() {
+        return Err(SolverError::Cancelled);
     }
+
+    frame
+        .empty_cells
+        .iter()
+        .map(|idx| {
+            frame.domain.with(constraints.domain(*idx), |domain| {
+                domain
+                    .iter()
+                    .map(|value| {
+                        diff.with(once((*idx, *value)), |set, diff| {
+                            cur.set_from_iter(set.iter().copied());
+                            constraints.set_many(set.iter().copied());
+                            match stack.with(|frame, stack| {
+                                solve(cancellation_token, frame, cur, constraints, stack, diff)
+                            }) {
+                                ok @ Ok(_) => ok,
+                                err @ Err(_) => {
+                                    constraints.unset_many(set.iter().copied());
+                                    cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
+                                    err
+                                }
+                            }
+                        })
+                    })
+                    .find_map(SolverError::ok_or_cancelled)
+                    .ok_or(SolverError::Infeasible)?
+            })
+        })
+        .find_map(SolverError::ok_or_cancelled)
+        .ok_or(SolverError::Infeasible)?
 }
 
 #[derive(Debug, Default)]
@@ -391,18 +436,29 @@ impl Solver for GreedySolver {
         let mut cancellation_token: RateLimitedCancellationToken<'_, { 1u64 << 20 }, _> =
             RateLimitedCancellationToken::new(cancellation_token);
         let mut mem = Box::new(SolverState::of_grid(grid));
-        let len = SolverStackTail::from(&mut mem.stack).with(|frame, stack| {
-            DiffTail::from(&mut mem.diff).with(empty(), |_, diff| {
-                solve(
-                    &mut cancellation_token,
-                    frame,
-                    &mut mem.grid,
-                    &mut mem.constraints,
-                    stack,
-                    diff,
-                )
+        let len = SolverStackTail::from(&mut mem.stack)
+            .with(|frame, stack| {
+                DiffTail::from(&mut mem.diff).with(empty(), |_, diff| {
+                    solve(
+                        &mut cancellation_token,
+                        frame,
+                        &mut mem.grid,
+                        &mut mem.constraints,
+                        stack,
+                        diff,
+                    )
+                })
             })
-        })?;
+            .map_err(|err| match err {
+                err @ (SolverError::Cancelled | SolverError::ConstraintsViolated) => err,
+                err @ SolverError::Infeasible => {
+                    if cancellation_token.never_ran() {
+                        SolverError::ConstraintsViolated
+                    } else {
+                        err
+                    }
+                }
+            })?;
         Ok(mem.diff.iter(len).collect::<U>())
     }
 }

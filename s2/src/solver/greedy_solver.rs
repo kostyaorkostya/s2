@@ -362,19 +362,11 @@ where
                                 }
                             })
                         })
-                        .find_map(|res| match res {
-                            ok @ Ok(_) => Some(ok),
-                            err @ Err(SolverError::Cancelled) => Some(err),
-                            Err(_) => None,
-                        })
+                        .find_map(SolverError::ok_or_cancelled)
                         .ok_or(SolverError::Infeasible)?
                 })
             })
-            .find_map(|res| match res {
-                ok @ Ok(_) => Some(ok),
-                err @ Err(SolverError::Cancelled) => Some(err),
-                Err(_) => None,
-            })
+            .find_map(SolverError::ok_or_cancelled)
             .ok_or(SolverError::Infeasible)?,
     }
 }

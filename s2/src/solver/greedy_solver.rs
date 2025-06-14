@@ -202,13 +202,13 @@ impl Diff {
 
 struct DiffTail<'a>(&'a mut [(GridIdx, GridValue)]);
 
-impl<'a> From<&'a mut [(GridIdx, GridValue)]> for &'a mut DiffTail<'a> {
+impl<'a> From<&'a mut [(GridIdx, GridValue)]> for DiffTail<'a> {
     fn from(slice: &'a mut [(GridIdx, GridValue)]) -> Self {
         Self(slice)
     }
 }
 
-impl<'a> From<&'a mut Diff> for &'a mut DiffTail<'a> {
+impl<'a> From<&'a mut Diff> for DiffTail<'a> {
     fn from(diff: &'a mut Diff) -> Self {
         (&mut diff.0[..]).into()
     }
@@ -234,7 +234,7 @@ impl<'a> DiffTail<'a> {
     {
         let cnt = self.push(iter);
         let (head, tail) = self.0.split_at_mut(cnt);
-        Ok(f(&head, tail.into())? + cnt)
+        Ok(f(&head, &mut tail.into())? + cnt)
     }
 }
 
@@ -353,7 +353,7 @@ impl Solver for GreedySolver {
                 frame,
                 &mut mem.grid,
                 &mut mem.constraints,
-                (&mut mem.diff).into(),
+                &mut (&mut mem.diff).into(),
             )
         })?;
         Ok(mem.diff.iter(len).collect::<U>())

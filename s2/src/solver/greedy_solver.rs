@@ -3,7 +3,7 @@ use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
 use bit_iter::BitIter;
-use std::iter::{once, zip};
+use std::iter::{empty, once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
 use tinyvec::ArrayVec;
@@ -356,13 +356,9 @@ impl Solver for GreedySolver {
     {
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = SolverStackTail::from(&mut mem.stack).with(|frame, stack| {
-            solve(
-                frame,
-                &mut mem.grid,
-                &mut mem.constraints,
-                stack,
-                &mut (&mut mem.diff).into(),
-            )
+            DiffTail::from(&mut mem.diff).with(empty(), |_, diff| {
+                solve(frame, &mut mem.grid, &mut mem.constraints, stack, diff)
+            })
         })?;
         Ok(mem.diff.iter(len).collect::<U>())
     }

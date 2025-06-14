@@ -289,10 +289,10 @@ impl SolverState {
 }
 
 fn solve<G>(
-    stack: &mut SolverStackTail<'_>,
     frame: &mut SolverStackFrame,
     cur: &mut G,
     constraints: &mut Constraints,
+    stack: &mut SolverStackTail<'_>,
     diff: &mut DiffTail<'_>,
 ) -> Result<usize, SolverError>
 where
@@ -319,7 +319,7 @@ where
                                 cur.set_from_iter(set.iter().copied());
                                 constraints.set_many(set.iter().copied());
                                 match stack.with(|frame, stack| {
-                                    solve(stack, frame, cur, constraints, diff)
+                                    solve(frame, cur, constraints, stack, diff)
                                 }) {
                                     ok @ Ok(_) => ok,
                                     err @ Err(_) => {
@@ -357,10 +357,10 @@ impl Solver for GreedySolver {
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = SolverStackTail::from(&mut mem.stack).with(|frame, stack| {
             solve(
-                stack,
                 frame,
                 &mut mem.grid,
                 &mut mem.constraints,
+                stack,
                 &mut (&mut mem.diff).into(),
             )
         })?;

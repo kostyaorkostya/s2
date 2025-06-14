@@ -194,13 +194,17 @@ impl EmptyCellsByDomainSize {
         self.0.iter().flat_map(|row| row.iter())
     }
 
-    fn is_empty(&self) -> bool {
-        self.0.iter().all(ArrayVec::is_empty)
-    }
-
-    fn all_domains_are_empty(&self) -> bool {
+    fn maybe_ok_or_infeasible(&self) -> Option<bool> {
         let (zero_sized, non_zero_sized) = self.0[..].split_first().unwrap();
-        !zero_sized.is_empty() && non_zero_sized.iter().all(ArrayVec::is_empty)
+        let zero_sized = zero_sized.is_empty();
+        let non_zero_sized = non_zero_sized.iter().all(ArrayVec::is_empty);
+        if zero_sized && non_zero_sized {
+            Some(true)
+        } else if !zero_sized && non_zero_sized {
+            Some(false)
+        } else {
+            None
+        }
     }
 }
 
@@ -375,10 +379,12 @@ where
             .map(|idx| (idx, constraints.domain_size(idx))),
     );
 
-    if frame.empty_cells.is_empty() {
-        return Ok(0);
-    } else if frame.empty_cells.all_domains_are_empty() {
-        return Err(SolverError::Infeasible);
+    if let Some(ok_or_infeasible) = frame.empty_cells.maybe_ok_or_infeasible() {
+        return if ok_or_infeasible {
+            Ok(0)
+        } else {
+            Err(SolverError::Infeasible)
+        };
     } else if cancellation_token.cancelled() {
         return Err(SolverError::Cancelled);
     }

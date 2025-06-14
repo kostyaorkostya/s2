@@ -177,7 +177,7 @@ impl Default for SolverStack {
 impl SolverStack {
     fn with<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
+        F: FnOnce(&mut SolverStackFrame, &mut SolverStackTail<'_>) -> R,
     {
         SolverStackTail::from(self).with(f)
     }
@@ -276,11 +276,11 @@ impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
 impl<'caller> SolverStackTail<'caller> {
     fn with<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
+        F: FnOnce(&mut SolverStackFrame, &mut SolverStackTail<'_>) -> R,
     {
         let (frame, tail) = self.0.split_first_mut().unwrap();
         frame.clear();
-        f(&mut tail.into(), frame)
+        f(frame, &mut tail.into())
     }
 }
 
@@ -317,7 +317,7 @@ where
                             cur.set_from_iter(set.iter().copied());
                             constraints.set_many(set.iter().copied());
                             match stack
-                                .with(|stack, frame| solve(stack, frame, cur, constraints, diff))
+                                .with(|frame, stack| solve(stack, frame, cur, constraints, diff))
                             {
                                 ok @ Ok(_) => ok,
                                 err @ Err(_) => {
@@ -352,7 +352,7 @@ impl Solver for GreedySolver {
         U: FromIterator<GridDiff>,
     {
         let mut mem = Box::new(SolverState::of_grid(grid));
-        let len = mem.stack.with(|stack, frame| {
+        let len = mem.stack.with(|frame, stack| {
             solve(
                 stack,
                 frame,

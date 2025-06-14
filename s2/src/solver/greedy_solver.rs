@@ -306,25 +306,30 @@ where
         [(_, 0)] | [.., (_, 0)] => Err(SolverError),
         empty_cells => empty_cells
             .iter()
-            .flat_map(|(idx, _)| {
+            .map(|(idx, _)| {
                 frame.domain.clear();
                 constraints.domain(*idx, &mut frame.domain);
-                frame.domain.iter().map(|value| {
-                    diff.with(once((*idx, *value)), |set, diff| {
-                        cur.set_from_iter(set.iter().copied());
-                        constraints.set_many(set.iter().copied());
-                        match stack
-                            .with(|stack, frame| solve_rec(stack, frame, cur, constraints, diff))
-                        {
-                            ok @ Ok(_) => ok,
-                            err @ Err(_) => {
-                                constraints.unset_many(set.iter().copied());
-                                cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
-                                err
+                frame
+                    .domain
+                    .iter()
+                    .map(|value| {
+                        diff.with(once((*idx, *value)), |set, diff| {
+                            cur.set_from_iter(set.iter().copied());
+                            constraints.set_many(set.iter().copied());
+                            match stack.with(|stack, frame| {
+                                solve_rec(stack, frame, cur, constraints, diff)
+                            }) {
+                                ok @ Ok(_) => ok,
+                                err @ Err(_) => {
+                                    constraints.unset_many(set.iter().copied());
+                                    cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
+                                    err
+                                }
                             }
-                        }
+                        })
                     })
-                })
+                    .find_map(Result::ok)
+                    .ok_or(SolverError)
             })
             .find_map(Result::ok)
             .ok_or(SolverError),

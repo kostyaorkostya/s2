@@ -179,61 +179,62 @@ impl SolverStack {
     where
         F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
     {
-        SolverStackTail::from(self).with_frame(f)
+        SolverStackTail::from(self).with(f)
     }
 }
 
 #[derive(Debug)]
-struct Diff {
-    diff: [(GridIdx, GridValue); GridIdx::COUNT],
-    next: usize,
-}
+struct Diff([(GridIdx, GridValue); GridIdx::COUNT]);
 
 impl Default for Diff {
     fn default() -> Self {
-        Self {
-            diff: [(GridIdx::default(), GridValue::default()); GridIdx::COUNT],
-            next: 0,
-        }
+        Self([(GridIdx::default(), GridValue::default()); GridIdx::COUNT])
     }
 }
 
 impl Diff {
+    fn iter(&self, len: usize) -> impl Iterator<Item = GridDiff> {
+        self.0[..len]
+            .iter()
+            .map(|(idx, value)| GridDiff::Set(*idx, *value))
+    }
+}
+
+struct DiffTail<'a>(&'a mut [(GridIdx, GridValue)]);
+
+impl<'a> From<&'a mut [(GridIdx, GridValue)]> for &'a mut DiffTail<'a> {
+    fn from(slice: &'a mut [(GridIdx, GridValue)]) -> Self {
+        Self(slice)
+    }
+}
+
+impl<'a> From<&'a mut Diff> for &'a mut DiffTail<'a> {
+    fn from(diff: &'a mut Diff) -> Self {
+        (&mut diff.0[..]).into()
+    }
+}
+
+impl<'a> DiffTail<'a> {
     fn push<I>(&mut self, iter: I) -> usize
     where
         I: Iterator<Item = (GridIdx, GridValue)>,
     {
         let mut cnt = 0;
-        for (arr_elt, elt) in zip(self.diff[self.next..].iter_mut(), iter) {
+        for (arr_elt, elt) in zip(self.0.iter_mut(), iter) {
             *arr_elt = elt;
             cnt += 1;
         }
-        self.next += cnt;
         cnt
     }
 
-    fn pop(&mut self, cnt: usize) {
-        self.next -= cnt
-    }
-
-    fn with<I, F>(&mut self, iter: I, f: F) -> bool
+    fn with<I, F>(&mut self, iter: I, f: F) -> Result<usize, SolverError>
     where
         I: Iterator<Item = (GridIdx, GridValue)>,
-        F: FnOnce(&[(GridIdx, GridValue)]) -> bool,
+        F: FnOnce(&[(GridIdx, GridValue)], &mut DiffTail<'_>) -> Result<usize, SolverError>,
     {
         let cnt = self.push(iter);
-        if f(&self.diff[(self.next - cnt)..self.next]) {
-            true
-        } else {
-            self.pop(cnt);
-            false
-        }
-    }
-
-    fn iter(&self) -> impl Iterator<Item = GridDiff> {
-        self.diff[..self.next]
-            .iter()
-            .map(|(idx, value)| GridDiff::Set(*idx, *value))
+        let (head, tail) = self.0.split_at_mut(cnt);
+        Ok(f(&head, tail.into())? + cnt)
     }
 }
 
@@ -273,7 +274,7 @@ impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
 }
 
 impl<'caller> SolverStackTail<'caller> {
-    fn with_frame<F, R>(&mut self, f: F) -> R
+    fn with<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut SolverStackTail<'_>, &mut SolverStackFrame) -> R,
     {
@@ -288,8 +289,8 @@ fn solve_rec<G>(
     frame: &mut SolverStackFrame,
     cur: &mut G,
     constraints: &mut Constraints,
-    diff: &mut Diff,
-) -> bool
+    diff: &mut DiffTail<'_>,
+) -> Result<usize, SolverError>
 where
     G: GridMut,
 {
@@ -301,34 +302,32 @@ where
     frame.empty_cells.sort_by_key(|(_, x)| *x);
 
     match &frame.empty_cells[..] {
-        [] => true,
-        [(_, 0)] | [.., (_, 0)] => false,
+        [] => Ok(0),
+        [(_, 0)] | [.., (_, 0)] => Err(SolverError),
         empty_cells => empty_cells
             .iter()
-            .map(|(x, _)| x)
-            .find_map(|idx| {
+            .flat_map(|(idx, _)| {
                 frame.domain.clear();
                 constraints.domain(*idx, &mut frame.domain);
-                for value in frame.domain {
-                    if diff.with(once((*idx, value)), |set| {
+                frame.domain.iter().map(|value| {
+                    diff.with(once((*idx, *value)), |set, diff| {
                         cur.set_from_iter(set.iter().copied());
                         constraints.set_many(set.iter().copied());
-                        if stack.with_frame(|stack, frame| {
-                            solve_rec(stack, frame, cur, constraints, diff)
-                        }) {
-                            true
-                        } else {
-                            constraints.unset_many(set.iter().copied());
-                            cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
-                            false
+                        match stack
+                            .with(|stack, frame| solve_rec(stack, frame, cur, constraints, diff))
+                        {
+                            ok @ Ok(_) => ok,
+                            err @ Err(_) => {
+                                constraints.unset_many(set.iter().copied());
+                                cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
+                                err
+                            }
                         }
-                    }) {
-                        return Some(true);
-                    }
-                }
-                None
+                    })
+                })
             })
-            .unwrap_or(false),
+            .find_map(Result::ok)
+            .ok_or(SolverError),
     }
 }
 
@@ -348,19 +347,16 @@ impl Solver for GreedySolver {
         U: FromIterator<GridDiff>,
     {
         let mut mem = Box::new(SolverState::of_grid(grid));
-        if mem.stack.with(|stack, frame| {
+        let len = mem.stack.with(|stack, frame| {
             solve_rec(
                 stack,
                 frame,
                 &mut mem.grid,
                 &mut mem.constraints,
-                &mut mem.diff,
+                (&mut mem.diff).into(),
             )
-        }) {
-            Ok(mem.diff.iter().collect::<U>())
-        } else {
-            Err(SolverError)
-        }
+        })?;
+        Ok(mem.diff.iter(len).collect::<U>())
     }
 }
 

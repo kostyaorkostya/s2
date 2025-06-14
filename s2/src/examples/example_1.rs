@@ -1,3 +1,4 @@
+use s2::cancellation_token::NeverCancelled;
 use s2::format::{read_from_string, RowMajorAscii};
 use s2::grid::{ArrGridRowMajor, GridMutWithDefault};
 use s2::solver::{GreedySolver, Solver};
@@ -20,13 +21,14 @@ ____8__79
 }
 
 fn main() {
+    let cancellation_token = NeverCancelled::new();
     let grid = create_grid();
     println!("{grid:?}");
     println!("{:?}", eval_status(&grid));
     let complete = ArrGridRowMajor::with_diff(
         &grid,
         GreedySolver::new()
-            .solve::<_, Vec<_>>(&grid)
+            .solve::<_, _, Vec<_>>(&cancellation_token, &grid)
             .unwrap()
             .into_iter(),
     );

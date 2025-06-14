@@ -1,4 +1,5 @@
 use super::{Solver, SolverError};
+use crate::cancellation_token::CancellationToken;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
@@ -267,6 +268,32 @@ impl<'a> DiffTail<'a> {
     }
 }
 
+#[derive(Debug)]
+struct RateLimitedCancellationToken<'a, const RATE: u64, C>
+where
+    C: CancellationToken,
+{
+    count: u64,
+    cancellation_token: &'a C,
+}
+
+impl<'a, const RATE: u64, C> RateLimitedCancellationToken<'a, RATE, C>
+where
+    C: CancellationToken,
+{
+    fn new(cancellation_token: &'a C) -> Self {
+        Self {
+            count: 0,
+            cancellation_token,
+        }
+    }
+
+    fn cancelled(&mut self) -> bool {
+        self.count += 1;
+        self.count % RATE == 0 && self.cancellation_token.cancelled()
+    }
+}
+
 #[derive(Debug, Default)]
 struct SolverState {
     stack: SolverStack,
@@ -288,7 +315,8 @@ impl SolverState {
     }
 }
 
-fn solve<G>(
+fn solve<const RATE: u64, C, G>(
+    cancellation_token: &mut RateLimitedCancellationToken<'_, RATE, C>,
     frame: &mut SolverStackFrame,
     cur: &mut G,
     constraints: &mut Constraints,
@@ -296,8 +324,12 @@ fn solve<G>(
     diff: &mut DiffTail<'_>,
 ) -> Result<usize, SolverError>
 where
+    C: CancellationToken,
     G: GridMut,
 {
+    if cancellation_token.cancelled() {
+        return Err(SolverError::Cancelled);
+    }
     frame.empty_cells.extend(
         cur.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
@@ -307,7 +339,7 @@ where
 
     match &frame.empty_cells[..] {
         [] => Ok(0),
-        [(_, 0)] | [.., (_, 0)] => Err(SolverError),
+        [(_, 0)] | [.., (_, 0)] => Err(SolverError::Infeasible),
         empty_cells => empty_cells
             .iter()
             .map(|(idx, _)| {
@@ -319,7 +351,7 @@ where
                                 cur.set_from_iter(set.iter().copied());
                                 constraints.set_many(set.iter().copied());
                                 match stack.with(|frame, stack| {
-                                    solve(frame, cur, constraints, stack, diff)
+                                    solve(cancellation_token, frame, cur, constraints, stack, diff)
                                 }) {
                                     ok @ Ok(_) => ok,
                                     err @ Err(_) => {
@@ -330,12 +362,20 @@ where
                                 }
                             })
                         })
-                        .find_map(Result::ok)
-                        .ok_or(SolverError)
+                        .find_map(|res| match res {
+                            ok @ Ok(_) => Some(ok),
+                            err @ Err(SolverError::Cancelled) => Some(err),
+                            Err(_) => None,
+                        })
+                        .ok_or(SolverError::Infeasible)?
                 })
             })
-            .find_map(Result::ok)
-            .ok_or(SolverError),
+            .find_map(|res| match res {
+                ok @ Ok(_) => Some(ok),
+                err @ Err(SolverError::Cancelled) => Some(err),
+                Err(_) => None,
+            })
+            .ok_or(SolverError::Infeasible)?,
     }
 }
 
@@ -349,15 +389,26 @@ impl GreedySolver {
 }
 
 impl Solver for GreedySolver {
-    fn solve<T, U>(&self, grid: &T) -> Result<U, SolverError>
+    fn solve<C, T, U>(&self, cancellation_token: &C, grid: &T) -> Result<U, SolverError>
     where
+        C: CancellationToken,
         T: Grid + ?Sized,
         U: FromIterator<GridDiff>,
     {
+        // TODO(kostya): check for validity
+        let mut cancellation_token: RateLimitedCancellationToken<'_, { 1u64 << 20 }, _> =
+            RateLimitedCancellationToken::new(cancellation_token);
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = SolverStackTail::from(&mut mem.stack).with(|frame, stack| {
             DiffTail::from(&mut mem.diff).with(empty(), |_, diff| {
-                solve(frame, &mut mem.grid, &mut mem.constraints, stack, diff)
+                solve(
+                    &mut cancellation_token,
+                    frame,
+                    &mut mem.grid,
+                    &mut mem.constraints,
+                    stack,
+                    diff,
+                )
             })
         })?;
         Ok(mem.diff.iter(len).collect::<U>())

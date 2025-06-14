@@ -2,6 +2,7 @@ use super::{Solver, SolverError};
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
+use std::iter::{once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
 use tinyvec::ArrayVec;
@@ -182,12 +183,66 @@ impl SolverStack {
     }
 }
 
+#[derive(Debug)]
+struct Diff {
+    diff: [(GridIdx, GridValue); GridIdx::COUNT],
+    next: usize,
+}
+
+impl Default for Diff {
+    fn default() -> Self {
+        Self {
+            diff: [(GridIdx::default(), GridValue::default()); GridIdx::COUNT],
+            next: 0,
+        }
+    }
+}
+
+impl Diff {
+    fn push<I>(&mut self, iter: I) -> usize
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        let mut cnt = 0;
+        for (arr_elt, elt) in zip(self.diff[self.next..].iter_mut(), iter) {
+            *arr_elt = elt;
+            cnt += 1;
+        }
+        self.next += cnt;
+        cnt
+    }
+
+    fn pop(&mut self, cnt: usize) {
+        self.next -= cnt
+    }
+
+    fn with<I, F>(&mut self, iter: I, f: F) -> bool
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+        F: FnOnce([(GridIdx, GridValue)]) -> bool,
+    {
+        let cnt = self.push(iter);
+        if f(self.diff[(self.next - cnt)..self.next]) {
+            true
+        } else {
+            self.pop(cnt);
+            false
+        }
+    }
+
+    fn iter(&self) -> impl Iterator<Item = GridDiff> {
+        self.diff[..self.next]
+            .iter()
+            .map(|(idx, value)| GridDiff::Set(*idx, *value))
+    }
+}
+
 #[derive(Debug, Default)]
 struct SolverState {
     stack: SolverStack,
     grid: ArrGridRowMajor,
     constraints: Constraints,
-    diff: ArrayVec<[(GridIdx, GridValue); GridIdx::COUNT]>,
+    diff: Diff,
 }
 
 impl SolverState {
@@ -233,12 +288,11 @@ fn solve_rec<G>(
     frame: &mut SolverStackFrame,
     cur: &mut G,
     constraints: &mut Constraints,
-    diff: &mut ArrayVec<[(GridIdx, GridValue); GridIdx::COUNT]>,
+    diff: &mut Diff,
 ) -> bool
 where
     G: GridMut,
 {
-    let diff_size_before = diff.len();
     frame.empty_cells.extend(
         cur.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
@@ -256,21 +310,20 @@ where
                 frame.domain.clear();
                 constraints.domain(*idx, &mut frame.domain);
                 for value in frame.domain {
-                    diff.push((*idx, value));
-                    cur.set_from_iter(diff[diff_size_before..].iter().copied());
-                    constraints.set_many(diff[diff_size_before..].iter().copied());
-                    if stack
-                        .with_frame(|stack, frame| solve_rec(stack, frame, cur, constraints, diff))
-                    {
+                    if diff.with(once((*idx, value)), |set| {
+                        cur.set_from_iter(set.iter().copied());
+                        constraints.set_many(set.iter().copied());
+                        if stack.with_frame(|stack, frame| {
+                            solve_rec(stack, frame, cur, constraints, diff)
+                        }) {
+                            true
+                        } else {
+                            constraints.unset_many(set.iter().copied());
+                            cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
+                            false
+                        }
+                    }) {
                         return Some(true);
-                    } else {
-                        constraints.unset_many(diff[diff_size_before..].iter().copied());
-                        cur.unset_from_iter(
-                            diff[diff_size_before..].iter().map(|(idx, _)| idx).copied(),
-                        );
-                        (0..diff_size_before).for_each(|_| {
-                            let _ = diff.pop();
-                        });
                     }
                 }
                 None
@@ -304,11 +357,7 @@ impl Solver for GreedySolver {
                 &mut mem.diff,
             )
         }) {
-            Ok(mem
-                .diff
-                .iter()
-                .map(|(idx, value)| GridDiff::Set(*idx, *value))
-                .collect::<U>())
+            Ok(mem.diff.iter().collect::<U>())
         } else {
             Err(SolverError)
         }

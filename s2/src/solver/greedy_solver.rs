@@ -418,6 +418,7 @@ impl Solver for GreedySolver {
 #[cfg(test)]
 mod greedy_solver_test {
     use super::{GreedySolver, Solver, SolverError};
+    use crate::cancellation_token::{AlreadyCancelled, NeverCancelled};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
     use crate::grid::{ArrGridRowMajor, GridMutWithDefault};
 
@@ -453,7 +454,7 @@ ____8__79
             &ArrGridRowMajor::with_diff(
                 &given,
                 GreedySolver::new()
-                    .solve::<_, Vec<_>>(&given)
+                    .solve::<_, _, Vec<_>>(&NeverCancelled::new(), &given)
                     .unwrap()
                     .into_iter(),
             ),
@@ -476,7 +477,7 @@ _4_8_____
 "#
         .trim();
         let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
-        let solution = GreedySolver::new().solve::<_, Vec<_>>(&given);
-        assert_eq!(solution, Err(SolverError));
+        let solution = GreedySolver::new().solve::<_, _, Vec<_>>(&AlreadyCancelled::new(), &given);
+        assert_eq!(solution, Err(SolverError::Cancelled));
     }
 }

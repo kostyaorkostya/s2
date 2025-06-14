@@ -21,14 +21,13 @@ _4_8_____
 }
 
 fn main() {
-    let cancellation_token = NeverCancelled::new();
     let grid = create_grid();
     println!("{grid:?}");
     println!("{:?}", eval_status(&grid));
     let complete = ArrGridRowMajor::with_diff(
         &grid,
         GreedySolver::new()
-            .solve::<_, _, Vec<_>>(&cancellation_token, &grid)
+            .solve::<_, _, Vec<_>>(&NeverCancelled::new(), &grid)
             .unwrap()
             .into_iter(),
     );

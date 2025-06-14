@@ -270,9 +270,9 @@ impl<'a> DiffTail<'a> {
 #[derive(Debug, Default)]
 struct SolverState {
     stack: SolverStack,
+    diff: Diff,
     grid: ArrGridRowMajor,
     constraints: Constraints,
-    diff: Diff,
 }
 
 impl SolverState {

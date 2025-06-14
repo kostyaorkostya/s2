@@ -284,7 +284,7 @@ impl<'caller> SolverStackTail<'caller> {
     }
 }
 
-fn solve_rec<G>(
+fn solve<G>(
     stack: &mut SolverStackTail<'_>,
     frame: &mut SolverStackFrame,
     cur: &mut G,
@@ -316,9 +316,9 @@ where
                         diff.with(once((*idx, *value)), |set, diff| {
                             cur.set_from_iter(set.iter().copied());
                             constraints.set_many(set.iter().copied());
-                            match stack.with(|stack, frame| {
-                                solve_rec(stack, frame, cur, constraints, diff)
-                            }) {
+                            match stack
+                                .with(|stack, frame| solve(stack, frame, cur, constraints, diff))
+                            {
                                 ok @ Ok(_) => ok,
                                 err @ Err(_) => {
                                     constraints.unset_many(set.iter().copied());
@@ -353,7 +353,7 @@ impl Solver for GreedySolver {
     {
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = mem.stack.with(|stack, frame| {
-            solve_rec(
+            solve(
                 stack,
                 frame,
                 &mut mem.grid,

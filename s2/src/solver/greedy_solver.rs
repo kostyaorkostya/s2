@@ -219,10 +219,10 @@ impl Diff {
     fn with<I, F>(&mut self, iter: I, f: F) -> bool
     where
         I: Iterator<Item = (GridIdx, GridValue)>,
-        F: FnOnce([(GridIdx, GridValue)]) -> bool,
+        F: FnOnce(&[(GridIdx, GridValue)]) -> bool,
     {
         let cnt = self.push(iter);
-        if f(self.diff[(self.next - cnt)..self.next]) {
+        if f(&self.diff[(self.next - cnt)..self.next]) {
             true
         } else {
             self.pop(cnt);

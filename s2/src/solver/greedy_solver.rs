@@ -1,11 +1,11 @@
 use super::{Solver, SolverError};
 use crate::cancellation_flag::CancellationFlag;
-use crate::grid;
+// use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
 use crate::util::{BoolMatrix9x9, Domain};
-use itertools::Itertools;
+// use itertools::Itertools;
 use std::array;
 use std::iter::{empty, once, zip};
 use strum::EnumCount;
@@ -129,101 +129,89 @@ impl EmptyCellsByDomainSize {
     }
 }
 
-#[derive(Debug, Default)]
-struct DomainsByUnit {
-    rows: [(u8, [Domain; grid::DIM]); grid::DIM],
-    cols: [(u8, [Domain; grid::DIM]); grid::DIM],
-    boxes: [(u8, [Domain; grid::DIM]); grid::DIM],
-}
+// #[derive(Debug, Default)]
+// struct DomainsByUnit {
+//     rows: [(u8, [Domain; grid::DIM]); grid::DIM],
+//     cols: [(u8, [Domain; grid::DIM]); grid::DIM],
+//     boxes: [(u8, [Domain; grid::DIM]); grid::DIM],
+// }
 
-impl DomainsByUnit {
-    fn clear(&mut self) {
-        self.rows[..].iter_mut().for_each(|(len, _)| *len = 0);
-        self.cols[..].iter_mut().for_each(|(len, _)| *len = 0);
-        self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
-    }
+// impl DomainsByUnit {
+//     fn clear(&mut self) {
+//         self.rows[..].iter_mut().for_each(|(len, _)| *len = 0);
+//         self.cols[..].iter_mut().for_each(|(len, _)| *len = 0);
+//         self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
+//     }
 
-    fn init<I>(&mut self, iter: I)
-    where
-        I: Iterator<Item = (GridIdx, Domain)>,
-    {
-        self.clear();
-        iter.for_each(|(idx, domain)| {
-            let row: &mut (u8, [Domain; grid::DIM]) = &mut self.rows[usize::from(idx.i)];
-            row.1[row.0 as usize] = domain;
-            row.0 += 1;
-            let col: &mut (u8, [Domain; grid::DIM]) = &mut self.cols[usize::from(idx.j)];
-            col.1[col.0 as usize] = domain;
-            col.0 += 1;
-            let box_: &mut (u8, [Domain; grid::DIM]) = &mut self.boxes[idx.box_()];
-            box_.1[box_.0 as usize] = domain;
-            box_.0 += 1;
-        })
-    }
+//     fn init<I>(&mut self, iter: I)
+//     where
+//         I: Iterator<Item = (GridIdx, Domain)>,
+//     {
+//         self.clear();
+//         iter.for_each(|(idx, domain)| {
+//             let row: &mut (u8, [Domain; grid::DIM]) = &mut self.rows[usize::from(idx.i)];
+//             row.1[row.0 as usize] = domain;
+//             row.0 += 1;
+//             let col: &mut (u8, [Domain; grid::DIM]) = &mut self.cols[usize::from(idx.j)];
+//             col.1[col.0 as usize] = domain;
+//             col.0 += 1;
+//             let box_: &mut (u8, [Domain; grid::DIM]) = &mut self.boxes[idx.box_()];
+//             box_.1[box_.0 as usize] = domain;
+//             box_.0 += 1;
+//         })
+//     }
+// }
 
-    // Assumes domains have a size of 1.
-    fn has_constradicting_naked_singles(&self) -> bool {
-        [&self.rows, &self.cols, &self.boxes].iter().any(|kind| {
-            kind.iter().any(|unit| {
-                unit.1[..(unit.0 as usize)]
-                    .iter()
-                    .tuple_combinations()
-                    .any(|(x, y)| x == y)
-            })
-        })
-    }
-}
+// #[derive(Debug)]
+// struct DiffVec {
+//     len: u8,
+//     elts: [(GridIdx, GridValue); GridIdx::COUNT],
+// }
 
-#[derive(Debug)]
-struct DiffVec {
-    len: u8,
-    elts: [(GridIdx, GridValue); GridIdx::COUNT],
-}
+// impl Default for DiffVec {
+//     fn default() -> Self {
+//         Self {
+//             len: 0,
+//             elts: array::from_fn(|_| Default::default()),
+//         }
+//     }
+// }
 
-impl Default for DiffVec {
-    fn default() -> Self {
-        Self {
-            len: 0,
-            elts: array::from_fn(|_| Default::default()),
-        }
-    }
-}
+// impl DiffVec {
+//     fn clear(&mut self) {
+//         self.len = 0;
+//     }
 
-impl DiffVec {
-    fn clear(&mut self) {
-        self.len = 0;
-    }
+//     fn fill<I>(&mut self, iter: I)
+//     where
+//         I: Iterator<Item = (GridIdx, GridValue)>,
+//     {
+//         self.clear();
+//         let mut cnt = 0;
+//         for (mut_elt, elt) in zip(self.elts.iter_mut(), iter) {
+//             *mut_elt = elt;
+//             cnt += 1;
+//         }
+//         self.len = cnt;
+//     }
 
-    fn fill<I>(&mut self, iter: I)
-    where
-        I: Iterator<Item = (GridIdx, GridValue)>,
-    {
-        self.clear();
-        let mut cnt = 0;
-        for (mut_elt, elt) in zip(self.elts.iter_mut(), iter) {
-            *mut_elt = elt;
-            cnt += 1;
-        }
-        self.len = cnt;
-    }
-
-    fn iter(&self) -> impl Iterator<Item = &(GridIdx, GridValue)> {
-        self.elts[..(self.len as usize)].iter()
-    }
-}
+//     fn iter(&self) -> impl Iterator<Item = &(GridIdx, GridValue)> {
+//         self.elts[..(self.len as usize)].iter()
+//     }
+// }
 
 #[derive(Debug, Default)]
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
-    domains_by_unit: DomainsByUnit,
-    diff: DiffVec,
+    // domains_by_unit: DomainsByUnit,
+    // diff: DiffVec,
 }
 
 impl StackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
-        self.domains_by_unit.clear();
-        self.diff.clear();
+        // self.domains_by_unit.clear();
+        // self.diff.clear();
     }
 }
 
@@ -431,31 +419,23 @@ where
         return Err(SolverError::Cancelled);
     }
 
-    // TODO(kostya) This is wrong, it doesn't check that setting these won't violate any
-    // constraints.
     match frame.empty_cells.of_domain_size(1) {
         [] => (),
         indices => {
-            frame
-                .domains_by_unit
-                .init(indices.iter().map(|idx| (*idx, constraints.domain(*idx))));
-            return if frame.domains_by_unit.has_constradicting_naked_singles() {
-                Err(SolverError::Infeasible)
-            } else {
-                frame.diff.fill(
-                    indices
-                        .iter()
-                        .map(|idx| (*idx, constraints.domain(*idx).iter().next().unwrap())),
-                );
-                solve_inner(
-                    frame.diff.iter().copied(),
-                    cancellation_flag,
-                    grid,
-                    constraints,
-                    stack,
-                    diff,
-                )
-            };
+            return indices
+                .iter()
+                .map(|idx| {
+                    solve_inner(
+                        once((*idx, constraints.domain(*idx).iter().next().unwrap())),
+                        cancellation_flag,
+                        grid,
+                        constraints,
+                        stack,
+                        diff,
+                    )
+                })
+                .find_map(SolverError::ok_or_cancelled)
+                .ok_or(SolverError::Infeasible)?
         }
     }
 

@@ -300,14 +300,31 @@ impl<'a> DiffTail<'a> {
         cnt
     }
 
-    fn with<I, F>(&mut self, iter: I, f: F) -> Result<usize, SolverError>
+    fn with<I, G, F>(
+        &mut self,
+        iter: I,
+        grid: &mut G,
+        constraints: &mut Constraints,
+        f: F,
+    ) -> Result<usize, SolverError>
     where
         I: Iterator<Item = (GridIdx, GridValue)>,
-        F: FnOnce(&[(GridIdx, GridValue)], &mut DiffTail<'_>) -> Result<usize, SolverError>,
+        G: GridMut,
+        F: FnOnce(&mut G, &mut Constraints, &mut DiffTail<'_>) -> Result<usize, SolverError>,
     {
         let cnt = self.push(iter);
         let (head, tail) = self.0.split_at_mut(cnt);
-        Ok(f(&head, &mut tail.into())? + cnt)
+        grid.set_from_iter(head.iter().copied());
+        constraints.set_many(head.iter().copied());
+        let len = match f(grid, constraints, &mut tail.into()) {
+            ok @ Ok(_) => ok,
+            err @ Err(_) => {
+                constraints.unset_many(head.iter().copied());
+                grid.unset_from_iter(head.iter().map(|(x, _)| x).copied());
+                err
+            }
+        }?;
+        Ok(len + cnt)
     }
 }
 
@@ -336,7 +353,7 @@ where
         self.count % RATE == 0 && self.cancellation_token.cancelled()
     }
 
-    fn never_ran(&self) -> bool {
+    fn never_checked(&self) -> bool {
         self.count == 0
     }
 }
@@ -365,7 +382,7 @@ impl SolverState {
 fn solve<const RATE: u64, C, G>(
     cancellation_token: &mut RateLimitedCancellationToken<'_, RATE, C>,
     frame: &mut SolverStackFrame,
-    cur: &mut G,
+    grid: &mut G,
     constraints: &mut Constraints,
     stack: &mut SolverStackTail<'_>,
     diff: &mut DiffTail<'_>,
@@ -375,7 +392,7 @@ where
     G: GridMut,
 {
     frame.empty_cells.insert(
-        cur.iter_unset()
+        grid.iter_unset()
             .map(|idx| (idx, constraints.domain_size(idx))),
     );
 
@@ -397,20 +414,16 @@ where
                 domain
                     .iter()
                     .map(|value| {
-                        diff.with(once((*idx, *value)), |set, diff| {
-                            cur.set_from_iter(set.iter().copied());
-                            constraints.set_many(set.iter().copied());
-                            match stack.with(|frame, stack| {
-                                solve(cancellation_token, frame, cur, constraints, stack, diff)
-                            }) {
-                                ok @ Ok(_) => ok,
-                                err @ Err(_) => {
-                                    constraints.unset_many(set.iter().copied());
-                                    cur.unset_from_iter(set.iter().map(|(x, _)| x).copied());
-                                    err
-                                }
-                            }
-                        })
+                        diff.with(
+                            once((*idx, *value)),
+                            grid,
+                            constraints,
+                            |grid, constraints, diff| {
+                                stack.with(|frame, stack| {
+                                    solve(cancellation_token, frame, grid, constraints, stack, diff)
+                                })
+                            },
+                        )
                     })
                     .find_map(SolverError::ok_or_cancelled)
                     .ok_or(SolverError::Infeasible)?
@@ -442,21 +455,26 @@ impl Solver for GreedySolver {
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = SolverStackTail::from(&mut mem.stack)
             .with(|frame, stack| {
-                DiffTail::from(&mut mem.diff).with(empty(), |_, diff| {
-                    solve(
-                        &mut cancellation_token,
-                        frame,
-                        &mut mem.grid,
-                        &mut mem.constraints,
-                        stack,
-                        diff,
-                    )
-                })
+                DiffTail::from(&mut mem.diff).with(
+                    empty(),
+                    &mut mem.grid,
+                    &mut mem.constraints,
+                    |grid, constraints, diff| {
+                        solve(
+                            &mut cancellation_token,
+                            frame,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    },
+                )
             })
             .map_err(|err| match err {
                 err @ (SolverError::Cancelled | SolverError::ConstraintsViolated) => err,
                 err @ SolverError::Infeasible => {
-                    if cancellation_token.never_ran() {
+                    if cancellation_token.never_checked() {
                         SolverError::ConstraintsViolated
                     } else {
                         err

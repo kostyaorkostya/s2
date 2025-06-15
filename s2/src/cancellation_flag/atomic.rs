@@ -5,11 +5,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub struct Atomic(AtomicBool);
 
 impl Atomic {
-    pub fn new(cancelled: bool) -> Self {
-        Self(AtomicBool::new(cancelled))
+    pub fn new() -> Self {
+        Default::default()
     }
 
-    pub fn cancel(&mut self) {
+    pub fn cancel(&self) {
         self.0.store(true, Ordering::Release)
     }
 }

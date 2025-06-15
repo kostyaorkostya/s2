@@ -498,6 +498,33 @@ mod greedy_solver_test {
     use crate::grid::{ArrGridRowMajor, GridMutWithDefault};
 
     #[test]
+    fn test_empty() {
+        let expected = r#"
+123456789
+456789123
+789123456
+231674895
+875912364
+694538217
+317265948
+542897631
+968341572"#
+            .trim();
+        let given = ArrGridRowMajor::new();
+        let complete = write_string(
+            &RowMajorAscii::default(),
+            &ArrGridRowMajor::with_diff(
+                &given,
+                GreedySolver::new()
+                    .solve::<_, _, Vec<_>>(&NeverCancelled::new(), &given)
+                    .unwrap()
+                    .into_iter(),
+            ),
+        );
+        assert_eq!(&expected, &complete);
+    }
+
+    #[test]
     fn test_feasible() {
         let given = r#"
 53__7____

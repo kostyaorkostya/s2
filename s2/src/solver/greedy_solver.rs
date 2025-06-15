@@ -208,12 +208,12 @@ impl EmptyCellsByDomainSize {
 }
 
 #[derive(Debug, Default)]
-struct SolverStackFrame {
+struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
     domain: Domain,
 }
 
-impl SolverStackFrame {
+impl StackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
     }
@@ -222,32 +222,32 @@ impl SolverStackFrame {
 const SOLVER_RECURSIVE_DEPTH: usize = GridIdx::COUNT + 1;
 
 #[derive(Debug)]
-struct SolverStack([SolverStackFrame; SOLVER_RECURSIVE_DEPTH]);
+struct Stack([StackFrame; SOLVER_RECURSIVE_DEPTH]);
 
-impl Default for SolverStack {
+impl Default for Stack {
     fn default() -> Self {
-        Self(std::array::from_fn(|_| SolverStackFrame::default()))
+        Self(std::array::from_fn(|_| StackFrame::default()))
     }
 }
 
-struct SolverStackTail<'a>(&'a mut [SolverStackFrame]);
+struct StackTail<'a>(&'a mut [StackFrame]);
 
-impl<'a> From<&'a mut [SolverStackFrame]> for SolverStackTail<'a> {
-    fn from(slice: &'a mut [SolverStackFrame]) -> Self {
+impl<'a> From<&'a mut [StackFrame]> for StackTail<'a> {
+    fn from(slice: &'a mut [StackFrame]) -> Self {
         Self(slice)
     }
 }
 
-impl<'a> From<&'a mut SolverStack> for SolverStackTail<'a> {
-    fn from(stack: &'a mut SolverStack) -> Self {
+impl<'a> From<&'a mut Stack> for StackTail<'a> {
+    fn from(stack: &'a mut Stack) -> Self {
         Self(&mut stack.0[..])
     }
 }
 
-impl<'caller> SolverStackTail<'caller> {
+impl<'caller> StackTail<'caller> {
     fn with<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut SolverStackFrame, &mut SolverStackTail<'_>) -> R,
+        F: FnOnce(&mut StackFrame, &mut StackTail<'_>) -> R,
     {
         let (frame, tail) = self.0.split_first_mut().unwrap();
         frame.clear();
@@ -359,7 +359,7 @@ where
 
 #[derive(Debug, Default)]
 struct SolverState {
-    stack: SolverStack,
+    stack: Stack,
     diff: Diff,
     grid: ArrGridRowMajor,
     constraints: Constraints,
@@ -380,10 +380,10 @@ impl SolverState {
 
 fn solve<const RATE: u64, C, G>(
     cancellation_flag: &mut RateLimitedCancellationFlag<'_, RATE, C>,
-    frame: &mut SolverStackFrame,
+    frame: &mut StackFrame,
     grid: &mut G,
     constraints: &mut Constraints,
-    stack: &mut SolverStackTail<'_>,
+    stack: &mut StackTail<'_>,
     diff: &mut DiffTail<'_>,
 ) -> Result<usize, SolverError>
 where
@@ -451,7 +451,7 @@ impl Solver for GreedySolver {
         let mut cancellation_flag: RateLimitedCancellationFlag<'_, { 1u64 << 10 }, _> =
             RateLimitedCancellationFlag::new(cancellation_flag);
         let mut mem = Box::new(SolverState::of_grid(grid));
-        let len = SolverStackTail::from(&mut mem.stack)
+        let len = StackTail::from(&mut mem.stack)
             .with(|frame, stack| {
                 DiffTail::from(&mut mem.diff).with(
                     empty(),

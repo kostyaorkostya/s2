@@ -1,15 +1,17 @@
 use super::{Solver, SolverError};
 use crate::cancellation_flag::CancellationFlag;
+use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
 use bit_iter::BitIter;
+use itertools::Itertools;
 use std::array;
 use std::iter::{empty, once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 struct Bits9(u16);
 
 impl Bits9 {
@@ -57,7 +59,7 @@ impl BitOr for Bits9 {
     }
 }
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 struct Domain(Bits9);
 
 impl From<&Bits9> for Domain {
@@ -121,8 +123,7 @@ impl Constraints {
     }
 
     fn constraint_indices(idx: GridIdx) -> (u8, u8, u8) {
-        let (i, j): (u8, u8) = (idx.i.into(), idx.j.into());
-        (i, j, ((i / 3 * 3) + j / 3))
+        (idx.i.into(), idx.j.into(), idx.box_() as u8)
     }
 
     fn set(&mut self, idx: GridIdx, value: GridValue) {
@@ -201,6 +202,11 @@ impl EmptyCellsByDomainSize {
             .flat_map(|(len, elts)| elts[..(*len as usize)].iter())
     }
 
+    fn of_domain_size(&self, domain_size: u8) -> &[GridIdx] {
+        let domain_size = domain_size as usize;
+        &self.elts[domain_size][..(self.len[domain_size] as usize)]
+    }
+
     fn maybe_ok_or_infeasible(&self) -> Option<bool> {
         let (zero_sized_len, non_zero_sized_lens) = self.len[..].split_first().unwrap();
         if *zero_sized_len != 0 {
@@ -214,13 +220,100 @@ impl EmptyCellsByDomainSize {
 }
 
 #[derive(Debug, Default)]
+struct DomainsByUnit {
+    rows: [(u8, [Domain; grid::DIM]); grid::DIM],
+    cols: [(u8, [Domain; grid::DIM]); grid::DIM],
+    boxes: [(u8, [Domain; grid::DIM]); grid::DIM],
+}
+
+impl DomainsByUnit {
+    fn clear(&mut self) {
+        self.rows[..].iter_mut().for_each(|(len, _)| *len = 0);
+        self.cols[..].iter_mut().for_each(|(len, _)| *len = 0);
+        self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
+    }
+
+    fn init<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, Domain)>,
+    {
+        self.clear();
+        iter.for_each(|(idx, domain)| {
+            let row: &mut (u8, [Domain; grid::DIM]) = &mut self.rows[usize::from(idx.i)];
+            row.1[row.0 as usize] = domain;
+            row.0 += 1;
+            let col: &mut (u8, [Domain; grid::DIM]) = &mut self.cols[usize::from(idx.j)];
+            col.1[col.0 as usize] = domain;
+            col.0 += 1;
+            let box_: &mut (u8, [Domain; grid::DIM]) = &mut self.boxes[idx.box_()];
+            box_.1[box_.0 as usize] = domain;
+            box_.0 += 1;
+        })
+    }
+
+    // Assumes domains have a size of 1.
+    fn has_mutually_exclusive_domains_of_size_one(&self) -> bool {
+        [&self.rows, &self.cols, &self.boxes].iter().any(|kind| {
+            kind.iter().any(|unit| {
+                unit.1[..(unit.0 as usize)]
+                    .iter()
+                    .tuple_combinations()
+                    .any(|(x, y)| x == y)
+            })
+        })
+    }
+}
+
+#[derive(Debug)]
+struct DiffVec {
+    len: u8,
+    elts: [(GridIdx, GridValue); GridIdx::COUNT],
+}
+
+impl Default for DiffVec {
+    fn default() -> Self {
+        Self {
+            len: 0,
+            elts: array::from_fn(|_| Default::default()),
+        }
+    }
+}
+
+impl DiffVec {
+    fn clear(&mut self) {
+        self.len = 0;
+    }
+
+    fn fill<I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, GridValue)>,
+    {
+        self.clear();
+        let mut cnt = 0;
+        for (mut_elt, elt) in zip(self.elts.iter_mut(), iter) {
+            *mut_elt = elt;
+            cnt += 1;
+        }
+        self.len = cnt;
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &(GridIdx, GridValue)> {
+        self.elts[..(self.len as usize)].iter()
+    }
+}
+
+#[derive(Debug, Default)]
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
+    domains_by_unit: DomainsByUnit,
+    diff: DiffVec,
 }
 
 impl StackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
+        self.domains_by_unit.clear();
+        self.diff.clear();
     }
 }
 
@@ -408,6 +501,37 @@ where
         };
     } else if cancellation_flag.cancelled() {
         return Err(SolverError::Cancelled);
+    }
+
+    match frame.empty_cells.of_domain_size(1) {
+        [] => (),
+        indices => {
+            frame
+                .domains_by_unit
+                .init(indices.iter().map(|idx| (*idx, constraints.domain(*idx))));
+            return if frame
+                .domains_by_unit
+                .has_mutually_exclusive_domains_of_size_one()
+            {
+                Err(SolverError::Infeasible)
+            } else {
+                frame.diff.fill(
+                    indices
+                        .iter()
+                        .map(|idx| (*idx, constraints.domain(*idx).iter().next().unwrap())),
+                );
+                diff.with(
+                    frame.diff.iter().copied(),
+                    grid,
+                    constraints,
+                    |grid, constraints, diff| {
+                        stack.with(|frame, stack| {
+                            solve(cancellation_flag, frame, grid, constraints, stack, diff)
+                        })
+                    },
+                )
+            };
+        }
     }
 
     frame

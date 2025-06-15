@@ -374,6 +374,12 @@ impl GridIdx {
         Ok((i, j).into())
     }
 
+    pub fn box_(&self) -> usize {
+        let i: usize = self.i.into();
+        let j: usize = self.j.into();
+        (i / 3 * 3) + j / 3
+    }
+
     pub fn iter_row_wise() -> impl Iterator<Item = Self> {
         IIdx::iter().cartesian_product(JIdx::iter()).map(Into::into)
     }

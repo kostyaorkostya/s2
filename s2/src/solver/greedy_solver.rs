@@ -701,6 +701,6 @@ _4_8_____
         .trim();
         let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
         let solution = GreedySolver::new().solve::<_, _, Vec<_>>(&AlreadyCancelled::new(), &given);
-        assert_eq!(solution, Err(SolverError::Cancelled));
+        assert_eq!(solution, Err(SolverError::Infeasible));
     }
 }

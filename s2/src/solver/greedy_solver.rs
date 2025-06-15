@@ -366,14 +366,14 @@ where
 }
 
 #[derive(Debug, Default)]
-struct SolverState {
+struct State {
     stack: Stack,
     diff: Diff,
     grid: ArrGridRowMajor,
     constraints: Constraints,
 }
 
-impl SolverState {
+impl State {
     fn of_grid<T>(grid: &T) -> Self
     where
         T: Grid + ?Sized,
@@ -458,7 +458,7 @@ impl Solver for GreedySolver {
     {
         let mut cancellation_flag: RateLimitedCancellationFlag<'_, { 1u64 << 10 }, _> =
             RateLimitedCancellationFlag::new(cancellation_flag);
-        let mut mem = Box::new(SolverState::of_grid(grid));
+        let mut mem = Box::new(State::of_grid(grid));
         let len = StackTail::from(&mut mem.stack)
             .with(|frame, stack| {
                 DiffTail::from(&mut mem.diff).with(

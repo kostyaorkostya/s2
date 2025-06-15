@@ -10,6 +10,8 @@ mod arr_grid;
 pub type ArrGridRowMajor = arr_grid::ArrGrid<true>;
 pub type ArrGridColMajor = arr_grid::ArrGrid<false>;
 
+pub const DIM: usize = 9;
+
 #[derive(
     Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
 )]

@@ -4,6 +4,7 @@ use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
 use bit_iter::BitIter;
+use std::array;
 use std::iter::{empty, once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
@@ -53,6 +54,31 @@ impl BitOr for Bits9 {
 
     fn bitor(self, rhs: Self) -> Self::Output {
         (self.0 | rhs.0).into()
+    }
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+struct Domain(Bits9);
+
+impl From<&Bits9> for Domain {
+    fn from(v: &Bits9) -> Self {
+        Self(*v)
+    }
+}
+
+impl From<Bits9> for Domain {
+    fn from(v: Bits9) -> Self {
+        Self::from(&v)
+    }
+}
+
+impl Domain {
+    fn size(&self) -> u8 {
+        self.0.count_zeros()
+    }
+
+    fn iter(&self) -> impl Iterator<Item = GridValue> + use<> {
+        self.0.iter_zeros().map(move |x| x.try_into().unwrap())
     }
 }
 
@@ -133,37 +159,9 @@ impl Constraints {
         }
     }
 
-    fn domain_mask(&self, idx: GridIdx) -> Bits9 {
+    fn domain(&self, idx: GridIdx) -> Domain {
         let (i, j, box_) = Self::constraint_indices(idx);
-        self.rows.row(i) | self.cols.row(j) | self.boxes.row(box_)
-    }
-
-    fn domain_size(&self, idx: GridIdx) -> u8 {
-        self.domain_mask(idx).count_zeros()
-    }
-
-    fn domain(&self, idx: GridIdx) -> impl Iterator<Item = GridValue> + use<> {
-        self.domain_mask(idx)
-            .iter_zeros()
-            .map(move |x| x.try_into().unwrap())
-    }
-}
-
-#[derive(Debug, Default)]
-struct Domain([GridValue; GridValue::COUNT]);
-
-impl Domain {
-    fn with<I, F, R>(&mut self, iter: I, f: F) -> R
-    where
-        I: Iterator<Item = GridValue>,
-        F: FnOnce(&[GridValue]) -> R,
-    {
-        let mut cnt = 0;
-        for (arr_elt, elt) in zip(self.0.iter_mut(), iter) {
-            *arr_elt = elt;
-            cnt += 1;
-        }
-        f(&self.0[..cnt])
+        (self.rows.row(i) | self.cols.row(j) | self.boxes.row(box_)).into()
     }
 }
 
@@ -218,7 +216,6 @@ impl EmptyCellsByDomainSize {
 #[derive(Debug, Default)]
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
-    domain: Domain,
 }
 
 impl StackFrame {
@@ -234,7 +231,7 @@ struct Stack([StackFrame; SOLVER_RECURSIVE_DEPTH]);
 
 impl Default for Stack {
     fn default() -> Self {
-        Self(std::array::from_fn(|_| StackFrame::default()))
+        Self(array::from_fn(|_| StackFrame::default()))
     }
 }
 
@@ -300,8 +297,8 @@ impl<'a> DiffTail<'a> {
         I: Iterator<Item = (GridIdx, GridValue)>,
     {
         let mut cnt = 0;
-        for (arr_elt, elt) in zip(self.0.iter_mut(), iter) {
-            *arr_elt = elt;
+        for (mut_elt, elt) in zip(self.0.iter_mut(), iter) {
+            *mut_elt = elt;
             cnt += 1;
         }
         cnt
@@ -400,7 +397,7 @@ where
 {
     frame.empty_cells.insert(
         grid.iter_unset()
-            .map(|idx| (idx, constraints.domain_size(idx))),
+            .map(|idx| (idx, constraints.domain(idx).size())),
     );
 
     if let Some(ok_or_infeasible) = frame.empty_cells.maybe_ok_or_infeasible() {
@@ -417,24 +414,23 @@ where
         .empty_cells
         .iter()
         .map(|idx| {
-            frame.domain.with(constraints.domain(*idx), |domain| {
-                domain
-                    .iter()
-                    .map(|value| {
-                        diff.with(
-                            once((*idx, *value)),
-                            grid,
-                            constraints,
-                            |grid, constraints, diff| {
-                                stack.with(|frame, stack| {
-                                    solve(cancellation_flag, frame, grid, constraints, stack, diff)
-                                })
-                            },
-                        )
-                    })
-                    .find_map(SolverError::ok_or_cancelled)
-                    .ok_or(SolverError::Infeasible)?
-            })
+            constraints
+                .domain(*idx)
+                .iter()
+                .map(|value| {
+                    diff.with(
+                        once((*idx, value)),
+                        grid,
+                        constraints,
+                        |grid, constraints, diff| {
+                            stack.with(|frame, stack| {
+                                solve(cancellation_flag, frame, grid, constraints, stack, diff)
+                            })
+                        },
+                    )
+                })
+                .find_map(SolverError::ok_or_cancelled)
+                .ok_or(SolverError::Infeasible)?
         })
         .find_map(SolverError::ok_or_cancelled)
         .ok_or(SolverError::Infeasible)?

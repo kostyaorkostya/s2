@@ -4,102 +4,11 @@ use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
-use bit_iter::BitIter;
+use crate::util::{BoolMatrix9x9, Domain};
 use itertools::Itertools;
 use std::array;
 use std::iter::{empty, once, zip};
-use std::ops::BitOr;
 use strum::EnumCount;
-
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-struct Bits9(u16);
-
-impl Bits9 {
-    fn count_zeros(&self) -> u8 {
-        (self.0 | !((1u16 << 9) - 1))
-            .count_zeros()
-            .try_into()
-            .unwrap()
-    }
-
-    fn iter_zeros(&self) -> impl Iterator<Item = u8> + use<> {
-        BitIter::from(!self.0 & ((1u16 << 9) - 1)).map(|x| x as u8)
-    }
-}
-
-impl From<&u16> for Bits9 {
-    fn from(v: &u16) -> Self {
-        Self(*v)
-    }
-}
-
-impl From<u16> for Bits9 {
-    fn from(v: u16) -> Self {
-        Self::from(&v)
-    }
-}
-
-impl From<&Bits9> for u16 {
-    fn from(v: &Bits9) -> Self {
-        v.0 & ((1u16 << 9) - 1)
-    }
-}
-
-impl From<Bits9> for u16 {
-    fn from(v: Bits9) -> Self {
-        (&v).into()
-    }
-}
-
-impl BitOr for Bits9 {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        (self.0 | rhs.0).into()
-    }
-}
-
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-struct Domain(Bits9);
-
-impl From<&Bits9> for Domain {
-    fn from(v: &Bits9) -> Self {
-        Self(*v)
-    }
-}
-
-impl From<Bits9> for Domain {
-    fn from(v: Bits9) -> Self {
-        Self::from(&v)
-    }
-}
-
-impl Domain {
-    fn size(&self) -> u8 {
-        self.0.count_zeros()
-    }
-
-    fn iter(&self) -> impl Iterator<Item = GridValue> + use<> {
-        self.0.iter_zeros().map(move |x| x.try_into().unwrap())
-    }
-}
-
-#[derive(Debug, Default)]
-struct BoolMatrix9x9(u128);
-
-impl BoolMatrix9x9 {
-    fn set(&mut self, idx: (u8, u8)) {
-        self.0 |= 1u128 << (idx.0 * 9 + idx.1)
-    }
-
-    fn unset(&mut self, idx: (u8, u8)) {
-        self.0 &= !(1u128 << (idx.0 * 9 + idx.1))
-    }
-
-    fn row(&self, idx: u8) -> Bits9 {
-        ((self.0 >> (idx * 9)) as u16).into()
-    }
-}
 
 #[derive(Debug, Default)]
 struct Constraints {

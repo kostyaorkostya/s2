@@ -535,9 +535,33 @@ impl Solver for GreedySolver {
 #[cfg(test)]
 mod greedy_solver_test {
     use super::{GreedySolver, Solver, SolverError};
-    use crate::cancellation_flag::{AlreadyCancelled, NeverCancelled};
+    use crate::cancellation_flag::{AlreadyCancelled, Atomic, NeverCancelled};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
-    use crate::grid::{ArrGridRowMajor, GridMutWithDefault};
+    use crate::grid::{ArrGridRowMajor, Grid, GridMutWithDefault};
+    use crate::status::{eval_status, SudokuStatus};
+    use std::sync::Arc;
+    use std::thread;
+    use std::time::Duration;
+
+    fn solve_with_timeout<T>(grid: &T, timeout: Duration) -> Result<ArrGridRowMajor, SolverError>
+    where
+        T: Grid,
+    {
+        let grid = ArrGridRowMajor::copy_of(grid);
+        let cancel = Arc::new(Atomic::new());
+        let cancellation_flag = cancel.clone();
+        let solve = thread::spawn(move || {
+            let cancellation_flag = cancellation_flag.clone();
+            GreedySolver::new().solve::<_, _, Vec<_>>(cancellation_flag.as_ref(), &grid)
+        });
+        // Before introduction of naked singles this example used to timeout.
+        thread::sleep(timeout);
+        cancel.cancel();
+        let diff = solve.join().unwrap()?;
+        let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
+        assert_eq!(&SudokuStatus::Complete, &eval_status(&complete).unwrap());
+        Ok(complete)
+    }
 
     #[test]
     fn test_empty() {
@@ -623,5 +647,37 @@ _4_8_____
         let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
         let solution = GreedySolver::new().solve::<_, _, Vec<_>>(&AlreadyCancelled::new(), &given);
         assert_eq!(solution, Err(SolverError::Infeasible));
+    }
+
+    #[test]
+    fn test_fuzzing_crash_1() {
+        let given = r#"
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+8________
+"#
+        .trim();
+        let expected = r#"
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+"#
+        .trim();
+        let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
+        let complete = solve_with_timeout(&given, Duration::from_secs(1))
+            .map(|grid| write_string(&RowMajorAscii::default(), &grid));
+        assert_eq!(&expected, &complete.unwrap());
     }
 }

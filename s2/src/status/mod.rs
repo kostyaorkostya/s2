@@ -5,7 +5,7 @@ use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::Display as DisplayMacros;
 
-#[derive(Debug, Default, DisplayMacros)]
+#[derive(Debug, Default, DisplayMacros, Eq, PartialEq)]
 pub enum SudokuStatus {
     #[default]
     Incomplete,

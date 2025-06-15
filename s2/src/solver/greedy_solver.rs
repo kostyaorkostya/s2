@@ -1,5 +1,5 @@
 use super::{Solver, SolverError};
-use crate::cancellation_token::CancellationToken;
+use crate::cancellation_flag::CancellationFlag;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
@@ -329,28 +329,28 @@ impl<'a> DiffTail<'a> {
 }
 
 #[derive(Debug)]
-struct RateLimitedCancellationToken<'a, const RATE: u64, C>
+struct RateLimitedCancellationFlag<'a, const RATE: u64, C>
 where
-    C: CancellationToken,
+    C: CancellationFlag,
 {
     count: u64,
-    cancellation_token: &'a C,
+    cancellation_flag: &'a C,
 }
 
-impl<'a, const RATE: u64, C> RateLimitedCancellationToken<'a, RATE, C>
+impl<'a, const RATE: u64, C> RateLimitedCancellationFlag<'a, RATE, C>
 where
-    C: CancellationToken,
+    C: CancellationFlag,
 {
-    fn new(cancellation_token: &'a C) -> Self {
+    fn new(cancellation_flag: &'a C) -> Self {
         Self {
             count: 0,
-            cancellation_token,
+            cancellation_flag,
         }
     }
 
     fn cancelled(&mut self) -> bool {
         self.count += 1;
-        self.count % RATE == 0 && self.cancellation_token.cancelled()
+        self.count % RATE == 0 && self.cancellation_flag.cancelled()
     }
 
     fn never_checked(&self) -> bool {
@@ -380,7 +380,7 @@ impl SolverState {
 }
 
 fn solve<const RATE: u64, C, G>(
-    cancellation_token: &mut RateLimitedCancellationToken<'_, RATE, C>,
+    cancellation_flag: &mut RateLimitedCancellationFlag<'_, RATE, C>,
     frame: &mut SolverStackFrame,
     grid: &mut G,
     constraints: &mut Constraints,
@@ -388,7 +388,7 @@ fn solve<const RATE: u64, C, G>(
     diff: &mut DiffTail<'_>,
 ) -> Result<usize, SolverError>
 where
-    C: CancellationToken,
+    C: CancellationFlag,
     G: GridMut,
 {
     frame.empty_cells.insert(
@@ -402,7 +402,7 @@ where
         } else {
             Err(SolverError::Infeasible)
         };
-    } else if cancellation_token.cancelled() {
+    } else if cancellation_flag.cancelled() {
         return Err(SolverError::Cancelled);
     }
 
@@ -420,7 +420,7 @@ where
                             constraints,
                             |grid, constraints, diff| {
                                 stack.with(|frame, stack| {
-                                    solve(cancellation_token, frame, grid, constraints, stack, diff)
+                                    solve(cancellation_flag, frame, grid, constraints, stack, diff)
                                 })
                             },
                         )
@@ -443,14 +443,14 @@ impl GreedySolver {
 }
 
 impl Solver for GreedySolver {
-    fn solve<C, T, U>(&self, cancellation_token: &C, grid: &T) -> Result<U, SolverError>
+    fn solve<C, T, U>(&self, cancellation_flag: &C, grid: &T) -> Result<U, SolverError>
     where
-        C: CancellationToken,
+        C: CancellationFlag,
         T: Grid + ?Sized,
         U: FromIterator<GridDiff>,
     {
-        let mut cancellation_token: RateLimitedCancellationToken<'_, { 1u64 << 10 }, _> =
-            RateLimitedCancellationToken::new(cancellation_token);
+        let mut cancellation_flag: RateLimitedCancellationFlag<'_, { 1u64 << 10 }, _> =
+            RateLimitedCancellationFlag::new(cancellation_flag);
         let mut mem = Box::new(SolverState::of_grid(grid));
         let len = SolverStackTail::from(&mut mem.stack)
             .with(|frame, stack| {
@@ -460,7 +460,7 @@ impl Solver for GreedySolver {
                     &mut mem.constraints,
                     |grid, constraints, diff| {
                         solve(
-                            &mut cancellation_token,
+                            &mut cancellation_flag,
                             frame,
                             grid,
                             constraints,
@@ -473,7 +473,7 @@ impl Solver for GreedySolver {
             .map_err(|err| match err {
                 err @ (SolverError::Cancelled | SolverError::ConstraintsViolated) => err,
                 err @ SolverError::Infeasible => {
-                    if cancellation_token.never_checked() {
+                    if cancellation_flag.never_checked() {
                         SolverError::ConstraintsViolated
                     } else {
                         err
@@ -487,7 +487,7 @@ impl Solver for GreedySolver {
 #[cfg(test)]
 mod greedy_solver_test {
     use super::{GreedySolver, Solver, SolverError};
-    use crate::cancellation_token::{AlreadyCancelled, NeverCancelled};
+    use crate::cancellation_flag::{AlreadyCancelled, NeverCancelled};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
     use crate::grid::{ArrGridRowMajor, GridMutWithDefault};
 

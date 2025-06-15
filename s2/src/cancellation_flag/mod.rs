@@ -1,4 +1,4 @@
-pub trait CancellationToken: Send + Sync {
+pub trait CancellationFlag: Send + Sync {
     fn cancelled(&self) -> bool;
 }
 

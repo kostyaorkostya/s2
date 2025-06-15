@@ -1,4 +1,4 @@
-use crate::cancellation_token::CancellationToken;
+use crate::cancellation_flag::CancellationFlag;
 use crate::grid::{Grid, GridDiff};
 use std::iter::FromIterator;
 use thiserror::Error;
@@ -29,9 +29,9 @@ impl SolverError {
 }
 
 pub trait Solver {
-    fn solve<C, T, U>(&self, cancellation_token: &C, grid: &T) -> Result<U, SolverError>
+    fn solve<C, T, U>(&self, cancellation_flag: &C, grid: &T) -> Result<U, SolverError>
     where
-        C: CancellationToken,
+        C: CancellationFlag,
         T: Grid + ?Sized,
         U: FromIterator<GridDiff>;
 }

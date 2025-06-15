@@ -1,4 +1,4 @@
-use s2::cancellation_token::NeverCancelled;
+use s2::cancellation_flag::NeverCancelled;
 use s2::format::{read_from_string, RowMajorAscii};
 use s2::grid::{ArrGridRowMajor, GridMutWithDefault};
 use s2::solver::{GreedySolver, Solver};

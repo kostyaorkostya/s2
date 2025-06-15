@@ -1,4 +1,4 @@
-pub mod cancellation_token;
+pub mod cancellation_flag;
 pub mod format;
 pub mod grid;
 pub mod solver;

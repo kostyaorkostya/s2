@@ -13,13 +13,7 @@ pub enum SudokuStatus {
 }
 
 #[derive(Debug, Default)]
-pub struct SudokuStatusError(());
-
-impl SudokuStatusError {
-    fn new() -> Self {
-        Default::default()
-    }
-}
+pub struct SudokuStatusError;
 
 impl From<SudokuStatus> for bool {
     fn from(value: SudokuStatus) -> Self {
@@ -83,7 +77,7 @@ impl Counter {
             match cnt {
                 0 => complete = false,
                 1 => (),
-                _ => return Err(SudokuStatusError::new()),
+                _ => return Err(SudokuStatusError),
             }
         }
         Ok(complete.into())

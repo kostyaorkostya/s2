@@ -4,14 +4,14 @@ extern crate libfuzzer_sys;
 extern crate s2;
 use s2::cancellation_flag::Atomic;
 use s2::format::{read_from_string, RowMajorAscii};
-use s2::grid::{ArrGridRowMajor, Grid, GridDiff, GridMutWithDefault};
+use s2::grid::{ArrGridRowMajor, Grid, GridMutWithDefault};
 use s2::solver::{GreedySolver, Solver, SolverError};
 use s2::status::{eval_status, SudokuStatus};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-fn solve_with_timeout<T>(grid: &T, timeout: Duration) -> Result<Vec<GridDiff>, SolverError>
+fn solve_with_timeout<T>(grid: &T, timeout: Duration) -> Result<ArrGridRowMajor, SolverError>
 where
     T: Grid,
 {
@@ -25,7 +25,13 @@ where
     // Before introduction of naked singles this example used to timeout.
     thread::sleep(timeout);
     cancel.cancel();
-    solve.join().unwrap()
+    let diff = solve.join().unwrap()?;
+    let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
+    assert_eq!(
+        &SudokuStatus::Complete,
+        &eval_status(&complete).expect(&format!("{:?}\n{:?}", grid, &complete))
+    );
+    Ok(complete)
 }
 
 fuzz_target!(|data: &[u8]| {
@@ -39,16 +45,9 @@ fuzz_target!(|data: &[u8]| {
                     SudokuStatus::Incomplete => {
                         match solve_with_timeout(&grid, Duration::from_secs(5)) {
                             Err(SolverError::Cancelled) => panic!("timed out\n{:?}", grid),
-                            Err(_) => (),
-                            Ok(diff) => {
-                                let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
-                                match eval_status(&complete) {
-                                    Err(_) | Ok(SudokuStatus::Incomplete) => {
-                                        panic!("{:?}\n{:?}", grid, complete)
-                                    }
-                                    Ok(SudokuStatus::Complete) => (),
-                                }
-                            }
+                            Err(SolverError::Infeasible) => (),
+                            Err(SolverError::ConstraintsViolated) => panic!("unexpected"),
+                            Ok(_) => (),
                         }
                     }
                 }

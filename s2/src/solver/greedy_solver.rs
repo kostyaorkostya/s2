@@ -561,7 +561,7 @@ mod greedy_solver_test {
         let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
         assert_eq!(
             &SudokuStatus::Complete,
-            &eval_status(&complete).expect(&write_string(&RowMajorAscii::default(), &complete))
+            &eval_status(&complete).expect(&format!("{:?}\n{:?}", grid, &complete))
         );
         Ok(complete)
     }

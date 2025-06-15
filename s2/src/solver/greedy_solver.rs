@@ -19,7 +19,7 @@ impl Bits9 {
     }
 
     fn iter_zeros(&self) -> impl Iterator<Item = u8> + use<> {
-        BitIter::from(!self.0).filter(|x| *x < 9).map(|x| x as u8)
+        BitIter::from(!self.0 & ((1u16 << 9) - 1)).map(|x| x as u8)
     }
 }
 

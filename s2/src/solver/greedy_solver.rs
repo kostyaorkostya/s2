@@ -648,8 +648,9 @@ _4_8_____
 "#
         .trim();
         let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
-        let solution = GreedySolver::new().solve::<_, _, Vec<_>>(&AlreadyCancelled::new(), &given);
-        assert_eq!(solution, Err(SolverError::Infeasible));
+        let complete = solve_with_timeout(&given, Duration::from_secs(1))
+            .map(|grid| write_string(&RowMajorAscii::default(), &grid));
+        assert_eq!(Err(SolverError::Infeasible), complete);
     }
 
     #[test]

@@ -7,7 +7,6 @@ use bit_iter::BitIter;
 use std::iter::{empty, once, zip};
 use std::ops::BitOr;
 use strum::EnumCount;
-use tinyvec::{array_vec, ArrayVec};
 
 #[derive(Debug, Default, Copy, Clone)]
 struct Bits9(u16);
@@ -168,38 +167,46 @@ impl Domain {
 }
 
 #[derive(Debug)]
-struct EmptyCellsByDomainSize([ArrayVec<[GridIdx; GridIdx::COUNT]>; GridValue::COUNT]);
+struct EmptyCellsByDomainSize {
+    len: [u8; GridValue::COUNT + 1],
+    elts: [[GridIdx; GridIdx::COUNT]; GridValue::COUNT + 1],
+}
 
 impl Default for EmptyCellsByDomainSize {
     fn default() -> Self {
-        Self(std::array::from_fn(|_| {
-            array_vec!([GridIdx; GridIdx::COUNT])
-        }))
+        Self {
+            len: [0; GridValue::COUNT + 1],
+            elts: [[GridIdx::default(); GridIdx::COUNT]; GridValue::COUNT + 1],
+        }
     }
 }
 
 impl EmptyCellsByDomainSize {
     fn clear(&mut self) {
-        self.0.iter_mut().for_each(|x| x.clear());
+        self.len.fill(0);
     }
 
     fn insert<I>(&mut self, iter: I)
     where
         I: Iterator<Item = (GridIdx, u8)>,
     {
-        iter.for_each(|(idx, domain_size)| self.0[usize::from(domain_size)].push(idx))
+        iter.for_each(|(idx, domain_size)| {
+            let domain_size = domain_size as usize;
+            self.elts[domain_size][self.len[domain_size] as usize] = idx;
+            self.len[domain_size] += 1
+        })
     }
 
     fn iter(&self) -> impl Iterator<Item = &GridIdx> + '_ {
-        self.0.iter().flat_map(|row| row.iter())
+        zip(self.len.iter(), self.elts.iter())
+            .flat_map(|(len, elts)| elts[..(*len as usize)].iter())
     }
 
     fn maybe_ok_or_infeasible(&self) -> Option<bool> {
-        let (zero_sized, non_zero_sized) = self.0[..].split_first().unwrap();
-        let zero_sized = zero_sized.is_empty();
-        if !zero_sized {
+        let (zero_sized_len, non_zero_sized_lens) = self.len[..].split_first().unwrap();
+        if *zero_sized_len != 0 {
             Some(false)
-        } else if non_zero_sized.iter().all(ArrayVec::is_empty) {
+        } else if non_zero_sized_lens.iter().all(|len| *len == 0) {
             Some(true)
         } else {
             None

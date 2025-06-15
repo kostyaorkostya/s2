@@ -162,7 +162,7 @@ impl DomainsByUnit {
     }
 
     // Assumes domains have a size of 1.
-    fn has_non_constradicting_naked_singles(&self) -> bool {
+    fn has_constradicting_naked_singles(&self) -> bool {
         [&self.rows, &self.cols, &self.boxes].iter().any(|kind| {
             kind.iter().any(|unit| {
                 unit.1[..(unit.0 as usize)]
@@ -437,7 +437,9 @@ where
             frame
                 .domains_by_unit
                 .init(indices.iter().map(|idx| (*idx, constraints.domain(*idx))));
-            return if frame.domains_by_unit.has_non_constradicting_naked_singles() {
+            return if frame.domains_by_unit.has_constradicting_naked_singles() {
+                Err(SolverError::Infeasible)
+            } else {
                 frame.diff.fill(
                     indices
                         .iter()
@@ -451,8 +453,6 @@ where
                     stack,
                     diff,
                 )
-            } else {
-                Err(SolverError::Infeasible)
             };
         }
     }

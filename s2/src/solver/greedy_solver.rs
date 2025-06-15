@@ -476,6 +476,24 @@ impl State {
     }
 }
 
+fn solve_inner<const RATE: u64, I, C, G>(
+    diff: I,
+    cancellation_flag: &mut RateLimitedCancellationFlag<'_, RATE, C>,
+    grid: &mut G,
+    constraints: &mut Constraints,
+    stack: &mut StackTail<'_>,
+    diff_tail: &mut DiffTail<'_>,
+) -> Result<usize, SolverError>
+where
+    I: Iterator<Item = (GridIdx, GridValue)>,
+    C: CancellationFlag,
+    G: GridMut,
+{
+    diff_tail.with(diff, grid, constraints, |grid, constraints, diff| {
+        stack.with(|frame, stack| solve(cancellation_flag, frame, grid, constraints, stack, diff))
+    })
+}
+
 fn solve<const RATE: u64, C, G>(
     cancellation_flag: &mut RateLimitedCancellationFlag<'_, RATE, C>,
     frame: &mut StackFrame,
@@ -520,15 +538,13 @@ where
                         .iter()
                         .map(|idx| (*idx, constraints.domain(*idx).iter().next().unwrap())),
                 );
-                diff.with(
+                solve_inner(
                     frame.diff.iter().copied(),
+                    cancellation_flag,
                     grid,
                     constraints,
-                    |grid, constraints, diff| {
-                        stack.with(|frame, stack| {
-                            solve(cancellation_flag, frame, grid, constraints, stack, diff)
-                        })
-                    },
+                    stack,
+                    diff,
                 )
             };
         }
@@ -542,15 +558,13 @@ where
                 .domain(*idx)
                 .iter()
                 .map(|value| {
-                    diff.with(
+                    solve_inner(
                         once((*idx, value)),
+                        cancellation_flag,
                         grid,
                         constraints,
-                        |grid, constraints, diff| {
-                            stack.with(|frame, stack| {
-                                solve(cancellation_flag, frame, grid, constraints, stack, diff)
-                            })
-                        },
+                        stack,
+                        diff,
                     )
                 })
                 .find_map(SolverError::ok_or_cancelled)

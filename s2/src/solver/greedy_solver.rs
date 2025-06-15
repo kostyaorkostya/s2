@@ -431,6 +431,8 @@ where
         return Err(SolverError::Cancelled);
     }
 
+    // TODO(kostya) This is wrong, it doesn't check that setting these won't violate any
+    // constraints.
     match frame.empty_cells.of_domain_size(1) {
         [] => (),
         indices => {

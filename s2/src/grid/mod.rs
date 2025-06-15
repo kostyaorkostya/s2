@@ -7,7 +7,8 @@ use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
 
 mod arr_grid;
-pub use arr_grid::{ArrGridColMajor, ArrGridRowMajor};
+pub type ArrGridRowMajor = arr_grid::ArrGrid<true>;
+pub type ArrGridColMajor = arr_grid::ArrGrid<false>;
 
 #[derive(
     Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,

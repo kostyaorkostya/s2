@@ -5,9 +5,6 @@ use std::ops::{Index, IndexMut};
 #[derive(Clone, Copy)]
 pub struct ArrGrid<const ROW_MAJOR: bool>([Option<GridValue>; GridIdx::COUNT]);
 
-pub type ArrGridRowMajor = ArrGrid<true>;
-pub type ArrGridColMajor = ArrGrid<false>;
-
 impl<const ROW_MAJOR: bool> ArrGrid<ROW_MAJOR> {
     fn to_inner_idx(idx: GridIdx) -> usize {
         if ROW_MAJOR {

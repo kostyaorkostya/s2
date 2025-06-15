@@ -197,11 +197,10 @@ impl EmptyCellsByDomainSize {
     fn maybe_ok_or_infeasible(&self) -> Option<bool> {
         let (zero_sized, non_zero_sized) = self.0[..].split_first().unwrap();
         let zero_sized = zero_sized.is_empty();
-        let non_zero_sized = non_zero_sized.iter().all(ArrayVec::is_empty);
-        if zero_sized && non_zero_sized {
-            Some(true)
-        } else if !zero_sized && non_zero_sized {
+        if !zero_sized {
             Some(false)
+        } else if non_zero_sized.iter().all(ArrayVec::is_empty) {
+            Some(true)
         } else {
             None
         }

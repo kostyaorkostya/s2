@@ -535,7 +535,7 @@ impl Solver for GreedySolver {
 #[cfg(test)]
 mod greedy_solver_test {
     use super::{GreedySolver, Solver, SolverError};
-    use crate::cancellation_flag::{AlreadyCancelled, Atomic, NeverCancelled};
+    use crate::cancellation_flag::{Atomic, NeverCancelled};
     use crate::format::{read_from_string, write_string, RowMajorAscii};
     use crate::grid::{ArrGridRowMajor, Grid, GridMutWithDefault};
     use crate::status::{eval_status, SudokuStatus};

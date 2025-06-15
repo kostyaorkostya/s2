@@ -13,7 +13,8 @@ struct Bits9(u16);
 
 impl Bits9 {
     fn count_zeros(&self) -> u8 {
-        (u16::from(self).count_zeros() - (16 - 9))
+        (self.0 | !((1u16 << 9) - 1))
+            .count_zeros()
             .try_into()
             .unwrap()
     }

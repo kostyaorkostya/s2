@@ -559,7 +559,10 @@ mod greedy_solver_test {
         cancel.cancel();
         let diff = solve.join().unwrap()?;
         let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
-        assert_eq!(&SudokuStatus::Complete, &eval_status(&complete).unwrap());
+        assert_eq!(
+            &SudokuStatus::Complete,
+            &eval_status(&complete).expect(&write_string(&RowMajorAscii::default(), &complete))
+        );
         Ok(complete)
     }
 

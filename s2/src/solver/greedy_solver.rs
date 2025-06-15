@@ -666,6 +666,7 @@ _________
 8________
 "#
         .trim();
+        // TODO(kostya): update once fixed
         let expected = r#"
 _________
 _________

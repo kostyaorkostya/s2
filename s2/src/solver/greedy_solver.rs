@@ -252,7 +252,7 @@ impl DomainsByUnit {
     }
 
     // Assumes domains have a size of 1.
-    fn has_mutually_exclusive_domains_of_size_one(&self) -> bool {
+    fn has_non_constradicting_naked_singles(&self) -> bool {
         [&self.rows, &self.cols, &self.boxes].iter().any(|kind| {
             kind.iter().any(|unit| {
                 unit.1[..(unit.0 as usize)]
@@ -527,12 +527,7 @@ where
             frame
                 .domains_by_unit
                 .init(indices.iter().map(|idx| (*idx, constraints.domain(*idx))));
-            return if frame
-                .domains_by_unit
-                .has_mutually_exclusive_domains_of_size_one()
-            {
-                Err(SolverError::Infeasible)
-            } else {
+            return if frame.domains_by_unit.has_non_constradicting_naked_singles() {
                 frame.diff.fill(
                     indices
                         .iter()
@@ -546,6 +541,8 @@ where
                     stack,
                     diff,
                 )
+            } else {
+                Err(SolverError::Infeasible)
             };
         }
     }

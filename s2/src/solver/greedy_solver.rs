@@ -101,8 +101,9 @@ impl EmptyCellsByDomainSize {
     {
         iter.for_each(|(idx, domain_size)| {
             let domain_size = domain_size as usize;
-            self.elts[domain_size][self.len[domain_size] as usize] = idx;
-            self.len[domain_size] += 1
+            let len: &mut u8 = &mut self.len[domain_size];
+            self.elts[domain_size][*len as usize] = idx;
+            *len += 1;
         })
     }
 

@@ -1,7 +1,7 @@
 use bit_iter::BitIter;
 use std::ops::BitOr;
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Bits9(u16);
 
 impl Bits9 {

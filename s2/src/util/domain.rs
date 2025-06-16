@@ -1,7 +1,7 @@
 use super::Bits9;
 use crate::grid::GridValue;
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Domain(Bits9);
 
 impl From<&Bits9> for Domain {

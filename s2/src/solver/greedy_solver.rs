@@ -1,11 +1,11 @@
 use super::{Solver, SolverError};
 use crate::cancellation_flag::CancellationFlag;
-// use crate::grid;
+use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
 use crate::util::{BoolMatrix9x9, Domain};
-// use itertools::Itertools;
+use itertools::Itertools;
 use std::array;
 use std::iter::{empty, once, zip};
 use strum::EnumCount;
@@ -129,38 +129,47 @@ impl EmptyCellsByDomainSize {
     }
 }
 
-// #[derive(Debug, Default)]
-// struct DomainsByUnit {
-//     rows: [(u8, [Domain; grid::DIM]); grid::DIM],
-//     cols: [(u8, [Domain; grid::DIM]); grid::DIM],
-//     boxes: [(u8, [Domain; grid::DIM]); grid::DIM],
-// }
+#[derive(Debug, Default)]
+struct GroupedByUnit {
+    rows: [(u8, [(Domain, GridIdx); grid::DIM]); grid::DIM],
+    cols: [(u8, [(Domain, GridIdx); grid::DIM]); grid::DIM],
+    boxes: [(u8, [(Domain, GridIdx); grid::DIM]); grid::DIM],
+}
 
-// impl DomainsByUnit {
-//     fn clear(&mut self) {
-//         self.rows[..].iter_mut().for_each(|(len, _)| *len = 0);
-//         self.cols[..].iter_mut().for_each(|(len, _)| *len = 0);
-//         self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
-//     }
+impl GroupedByUnit {
+    fn clear(&mut self) {
+        self.rows[..].iter_mut().for_each(|(len, _)| *len = 0);
+        self.cols[..].iter_mut().for_each(|(len, _)| *len = 0);
+        self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
+    }
 
-//     fn init<I>(&mut self, iter: I)
-//     where
-//         I: Iterator<Item = (GridIdx, Domain)>,
-//     {
-//         self.clear();
-//         iter.for_each(|(idx, domain)| {
-//             let row: &mut (u8, [Domain; grid::DIM]) = &mut self.rows[usize::from(idx.i)];
-//             row.1[row.0 as usize] = domain;
-//             row.0 += 1;
-//             let col: &mut (u8, [Domain; grid::DIM]) = &mut self.cols[usize::from(idx.j)];
-//             col.1[col.0 as usize] = domain;
-//             col.0 += 1;
-//             let box_: &mut (u8, [Domain; grid::DIM]) = &mut self.boxes[idx.box_()];
-//             box_.1[box_.0 as usize] = domain;
-//             box_.0 += 1;
-//         })
-//     }
-// }
+    fn init<const SORT: bool, I>(&mut self, iter: I)
+    where
+        I: Iterator<Item = (GridIdx, Domain)>,
+    {
+        self.clear();
+        iter.for_each(|(idx, domain)| {
+            let row: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.rows[usize::from(idx.i)];
+            row.1[row.0 as usize] = (domain, idx);
+            row.0 += 1;
+            let col: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.cols[usize::from(idx.j)];
+            col.1[col.0 as usize] = (domain, idx);
+            col.0 += 1;
+            let box_: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.boxes[idx.box_()];
+            box_.1[box_.0 as usize] = (domain, idx);
+            box_.0 += 1;
+        });
+        if SORT {
+            [&mut self.rows, &mut self.cols, &mut self.boxes]
+                .iter_mut()
+                .for_each(|kind| {
+                    kind.iter_mut().for_each(|unit| {
+                        unit.1[..(unit.0 as usize)].sort_by_key(|(domain, _)| *domain)
+                    })
+                })
+        }
+    }
+}
 
 // #[derive(Debug)]
 // struct DiffVec {
@@ -203,14 +212,14 @@ impl EmptyCellsByDomainSize {
 #[derive(Debug, Default)]
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
-    // domains_by_unit: DomainsByUnit,
+    grouped_by_unit: GroupedByUnit,
     // diff: DiffVec,
 }
 
 impl StackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
-        // self.domains_by_unit.clear();
+        self.grouped_by_unit.clear();
         // self.diff.clear();
     }
 }
@@ -422,6 +431,10 @@ where
     match frame.empty_cells.of_domain_size(1) {
         [] => (),
         indices => {
+            frame
+                .grouped_by_unit
+                .init::<false, _>(indices.iter().map(|idx| (*idx, constraints.domain(*idx))));
+
             return indices
                 .iter()
                 .map(|idx| {
@@ -435,7 +448,7 @@ where
                     )
                 })
                 .find_map(SolverError::ok_or_cancelled)
-                .ok_or(SolverError::Infeasible)?
+                .ok_or(SolverError::Infeasible)?;
         }
     }
 

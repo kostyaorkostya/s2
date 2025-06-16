@@ -31,7 +31,7 @@ where
     type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.to >= self.slice.len() {
+        if self.to == self.slice.len() {
             return None;
         }
 

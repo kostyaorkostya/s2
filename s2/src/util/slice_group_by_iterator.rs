@@ -36,9 +36,12 @@ where
         }
 
         self.from = self.to;
-        self.to += zip(self.slice[self.to..].iter(), self.slice[self.to..].iter())
-            .take_while(|(this, next)| (self.equal)(this, next))
-            .count()
+        self.to += zip(
+            self.slice[self.to..].iter(),
+            self.slice[self.to..].iter().skip(1),
+        )
+        .take_while(|(this, next)| (self.equal)(this, next))
+        .count()
             + 1;
         Some(&self.slice[self.from..self.to])
     }

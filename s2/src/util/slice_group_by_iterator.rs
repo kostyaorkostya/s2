@@ -14,7 +14,7 @@ impl<'a, T, F> SliceGroupByIterator<'a, T, F>
 where
     F: Fn(&T, &T) -> bool,
 {
-    fn new(slice: &'a [T], equal: F) -> Self {
+    pub fn new(slice: &'a [T], equal: F) -> Self {
         Self {
             slice,
             equal,

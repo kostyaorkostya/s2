@@ -4,8 +4,7 @@ use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
-use crate::util::{BoolMatrix9x9, Domain};
-use itertools::Itertools;
+use crate::util::{BoolMatrix9x9, Domain, SliceGroupByIterator};
 use std::array;
 use std::iter::{empty, once, zip};
 use strum::EnumCount;
@@ -143,7 +142,7 @@ impl GroupedByUnit {
         self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
     }
 
-    fn init<const SORT: bool, I>(&mut self, iter: I)
+    fn init<I>(&mut self, iter: I)
     where
         I: Iterator<Item = (GridIdx, Domain)>,
     {
@@ -159,15 +158,27 @@ impl GroupedByUnit {
             box_.1[box_.0 as usize] = (domain, idx);
             box_.0 += 1;
         });
-        if SORT {
-            [&mut self.rows, &mut self.cols, &mut self.boxes]
-                .iter_mut()
-                .for_each(|kind| {
-                    kind.iter_mut().for_each(|unit| {
-                        unit.1[..(unit.0 as usize)].sort_by_key(|(domain, _)| *domain)
-                    })
-                })
-        }
+        self.rows
+            .iter_mut()
+            .chain(self.cols.iter_mut())
+            .chain(self.boxes.iter_mut())
+            .for_each(|unit| {
+                unit.1[..(unit.0 as usize)]
+                    .sort_by_key(|(domain, idx)| (domain.size(), *domain, *idx))
+            })
+    }
+
+    fn iter_equal_domains(&self) -> impl Iterator<Item = &[(Domain, GridIdx)]> {
+        self.rows
+            .iter()
+            .chain(self.cols.iter())
+            .chain(self.cols.iter())
+            .flat_map(|unit| {
+                SliceGroupByIterator::<(Domain, GridIdx), _>::new(
+                    &unit.1[..(unit.0 as usize)],
+                    |lhs, rhs| lhs.0 == rhs.0,
+                )
+            })
     }
 }
 
@@ -428,13 +439,24 @@ where
         return Err(SolverError::Cancelled);
     }
 
+    frame
+        .grouped_by_unit
+        .init(grid.iter_unset().map(|idx| (idx, constraints.domain(idx))));
+
+    if frame
+        .grouped_by_unit
+        .iter_equal_domains()
+        .any(|with_equal_domain| {
+            let domain_size = with_equal_domain.first().unwrap().0.size();
+            domain_size < (with_equal_domain.len() as u8)
+        })
+    {
+        return Err(SolverError::Infeasible);
+    }
+
     match frame.empty_cells.of_domain_size(1) {
         [] => (),
         indices => {
-            frame
-                .grouped_by_unit
-                .init::<false, _>(indices.iter().map(|idx| (*idx, constraints.domain(*idx))));
-
             return indices
                 .iter()
                 .map(|idx| {

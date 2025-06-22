@@ -407,14 +407,15 @@ where
         return Err(SolverError::Cancelled);
     }
 
+    // Look for naked sets.
     match (1u8..=5u8)
-        .flat_map(|locked_set_size| {
+        .flat_map(|naked_set_size| {
             frame
                 .grouped_by_unit
                 .iter_equal_domains()
                 .filter(move |with_equal_domain| {
-                    with_equal_domain.len() == locked_set_size as usize
-                        && with_equal_domain.first().unwrap().0.size() == locked_set_size
+                    with_equal_domain.len() == naked_set_size as usize
+                        && with_equal_domain.first().unwrap().0.size() == naked_set_size
                 })
         })
         .next()
@@ -496,6 +497,8 @@ where
         None => (),
         Some(res) => return res,
     };
+
+    // TODO(kostya): look for hidden sets
 
     frame.empty_cells.init(
         grid.iter_unset()

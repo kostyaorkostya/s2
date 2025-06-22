@@ -405,8 +405,8 @@ where
                 .grouped_by_unit
                 .iter_equal_domains()
                 .filter(|with_equal_domain| {
-                    with_equal_domain.first().unwrap().0.size() == domain_size
-                        && with_equal_domain.len() == domain_size as usize
+                    with_equal_domain.len() == domain_size as usize
+                        && with_equal_domain.first().unwrap().0.size() == domain_size
                 })
                 .map(|with_equal_domain| match domain_size {
                     1 => permutations::try_find::<1, _, _, _, _, _, _>(

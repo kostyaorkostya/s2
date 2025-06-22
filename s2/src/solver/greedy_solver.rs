@@ -310,12 +310,12 @@ where
         self.count % RATE == 0 && self.cancellation_flag.cancelled()
     }
 
-    fn never_checked(&self) -> bool {
-        self.count == 0
-    }
-
     fn count(&self) -> u64 {
         self.count
+    }
+
+    fn never_checked(&self) -> bool {
+        self.count() == 0
     }
 }
 
@@ -403,6 +403,9 @@ where
         _ => (),
     }
 
+    // Check if cancelled. This must happen __after__ the check for completeness or infisibility,
+    // as calleer relies on it and is using `cancellation_flag` counter to tell if the grid had
+    // constraints violation from the start.
     if cancellation_flag.cancelled() {
         return Err(SolverError::Cancelled);
     }

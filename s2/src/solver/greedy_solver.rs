@@ -111,11 +111,6 @@ impl EmptyCellsByDomainSize {
         zip(self.len.iter(), self.elts.iter())
             .flat_map(|(len, elts)| elts[..(*len as usize)].iter())
     }
-
-    fn of_domain_size(&self, domain_size: u8) -> &[GridIdx] {
-        let domain_size = domain_size as usize;
-        &self.elts[domain_size][..(self.len[domain_size] as usize)]
-    }
 }
 
 #[derive(Debug, Default)]

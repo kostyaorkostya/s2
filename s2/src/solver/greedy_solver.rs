@@ -733,7 +733,7 @@ _________
 
     #[test]
     fn test_fuzzing_crash_2() {
-        // TODO(kostya): times out
+        // TODO(kostya): times out, but should be infeasible
         let given = r#"
 3417_6___
 ____958__

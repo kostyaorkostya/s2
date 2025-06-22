@@ -94,10 +94,11 @@ impl EmptyCellsByDomainSize {
         self.len.fill(0);
     }
 
-    fn insert<I>(&mut self, iter: I)
+    fn init<I>(&mut self, iter: I)
     where
         I: Iterator<Item = (GridIdx, u8)>,
     {
+        self.clear();
         iter.for_each(|(idx, domain_size)| {
             let domain_size = domain_size as usize;
             let len: &mut u8 = &mut self.len[domain_size];
@@ -424,7 +425,7 @@ where
     C: CancellationFlag,
     G: GridMut,
 {
-    frame.empty_cells.insert(
+    frame.empty_cells.init(
         grid.iter_unset()
             .map(|idx| (idx, constraints.domain(idx).size())),
     );

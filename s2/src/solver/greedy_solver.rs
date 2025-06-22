@@ -4,7 +4,7 @@ use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
-use crate::util::{BoolMatrix9x9, Domain, SliceGroupByIterator};
+use crate::util::{permutations, BoolMatrix9x9, Domain, SliceGroupByIterator};
 use std::array;
 use std::iter::{empty, once, zip};
 use strum::EnumCount;
@@ -21,7 +21,7 @@ impl Constraints {
         Default::default()
     }
 
-    fn of_grid<T>(grid: &T) -> Self
+    fn from_grid<T>(grid: &T) -> Self
     where
         T: Grid + ?Sized,
     {
@@ -334,13 +334,13 @@ struct State {
 }
 
 impl State {
-    fn of_grid<T>(grid: &T) -> Self
+    fn from_grid<T>(grid: &T) -> Self
     where
         T: Grid + ?Sized,
     {
         Self {
             grid: ArrGridRowMajor::copy_of(grid),
-            constraints: Constraints::of_grid(grid),
+            constraints: Constraints::from_grid(grid),
             ..Default::default()
         }
     }
@@ -403,30 +403,50 @@ where
         return Err(SolverError::Cancelled);
     }
 
+    (1u8..=5u8)
+        .rev()
+        .map(|domain_size| {
+            let try_find = match domain_size {
+                1 => permutations::try_find::<1, _, _, _, _, _>,
+                2 => permutations::try_find::<2, _, _, _, _, _>,
+                3 => permutations::try_find::<3, _, _, _, _, _>,
+                4 => permutations::try_find::<4, _, _, _, _, _>,
+                5 => permutations::try_find::<5, _, _, _, _, _>,
+                _ => panic!("unreachable"),
+            };
+            // TODO(kostya): filter cell combinations that were already visited
+            frame
+                .grouped_by_unit
+                .iter_equal_domains()
+                .filter(|with_equal_domain| {
+                    with_equal_domain.first().unwrap().0.size() == domain_size
+                })
+                .map(|with_equal_domain| {
+                    let domain = with_equal_domain.first().unwrap().0;
+                    try_find(domain.iter(), |values: &[GridValue]| {
+                        solve_inner(
+                            zip(
+                                with_equal_domain.iter().map(|(_, x)| x).copied(),
+                                values.iter().copied(),
+                            ),
+                            cancellation_flag,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    })
+                })
+                .find_map(SolverError::ok_or_cancelled)
+                .ok_or(SolverError::Infeasible)?
+        })
+        .find_map(SolverError::ok_or_cancelled)
+        .ok_or(SolverError::Infeasible)?;
+
     frame.empty_cells.init(
         grid.iter_unset()
             .map(|idx| (idx, constraints.domain(idx).size())),
     );
-
-    match frame.empty_cells.of_domain_size(1) {
-        [] => (),
-        indices => {
-            return indices
-                .iter()
-                .map(|idx| {
-                    solve_inner(
-                        once((*idx, constraints.domain(*idx).iter().next().unwrap())),
-                        cancellation_flag,
-                        grid,
-                        constraints,
-                        stack,
-                        diff,
-                    )
-                })
-                .find_map(SolverError::ok_or_cancelled)
-                .ok_or(SolverError::Infeasible)?;
-        }
-    }
 
     frame
         .empty_cells
@@ -470,7 +490,7 @@ impl Solver for GreedySolver {
     {
         let mut cancellation_flag: RateLimitedCancellationFlag<'_, { 1u64 << 10 }, _> =
             RateLimitedCancellationFlag::new(cancellation_flag);
-        let mut mem = Box::new(State::of_grid(grid));
+        let mut mem = Box::new(State::from_grid(grid));
         let len = StackTail::from(&mut mem.stack)
             .with(|frame, stack| {
                 DiffTail::from(&mut mem.diff).with(
@@ -504,7 +524,7 @@ impl Solver for GreedySolver {
 }
 
 #[cfg(test)]
-mod greedy_solver_test {
+mod test {
     use super::{GreedySolver, Solver, SolverError};
     use crate::cancellation_flag::{Atomic, NeverCancelled};
     use crate::format::{read_from_string, write_string, RowMajorAscii};

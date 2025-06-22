@@ -8,3 +8,4 @@ mod slice_group_by_iterator;
 pub use slice_group_by_iterator::SliceGroupByIterator;
 mod three_ordered_iterator;
 pub use three_ordered_iterator::ThreeOrderedIterator;
+pub mod permutations;

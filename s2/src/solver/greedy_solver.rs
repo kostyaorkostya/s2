@@ -171,14 +171,12 @@ impl GroupedByUnit {
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
     grouped_by_unit: GroupedByUnit,
-    // diff: DiffVec,
 }
 
 impl StackFrame {
     fn clear(&mut self) {
         self.empty_cells.clear();
         self.grouped_by_unit.clear();
-        // self.diff.clear();
     }
 }
 

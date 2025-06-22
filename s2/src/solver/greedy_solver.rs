@@ -444,6 +444,25 @@ where
         .grouped_by_unit
         .init(grid.iter_unset().map(|idx| (idx, constraints.domain(idx))));
 
+    match frame
+        .grouped_by_unit
+        .iter_equal_domains()
+        .map(|with_equal_domain| {
+            let domain_size = with_equal_domain.first().unwrap().0.size();
+            domain_size < (with_equal_domain.len() as u8)
+        })
+        .enumerate()
+        .fold(
+            (0, false),
+            |(_, infeasible), (cnt, domain_size_less_than_elt_cnt)| {
+                (cnt, infeasible || domain_size_less_than_elt_cnt)
+            },
+        ) {
+        (0, _) => return Ok(0),
+        (_, true) => return Err(SolverError::Infeasible),
+        _ => (),
+    }
+
     if frame
         .grouped_by_unit
         .iter_equal_domains()

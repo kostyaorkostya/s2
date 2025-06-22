@@ -147,10 +147,7 @@ impl GroupedByUnit {
             .iter_mut()
             .chain(self.cols.iter_mut())
             .chain(self.boxes.iter_mut())
-            .for_each(|unit| {
-                unit.1[..(unit.0 as usize)]
-                    .sort_by_key(|(domain, idx)| (domain.size(), *domain, *idx))
-            })
+            .for_each(|unit| unit.1[..(unit.0 as usize)].sort())
     }
 
     fn iter_equal_domains(&self) -> impl Iterator<Item = &[(Domain, GridIdx)]> {
@@ -316,6 +313,10 @@ where
     fn never_checked(&self) -> bool {
         self.count == 0
     }
+
+    fn count(&self) -> u64 {
+        self.count
+    }
 }
 
 #[derive(Debug, Default)]
@@ -369,6 +370,16 @@ where
     C: CancellationFlag,
     G: GridMut,
 {
+    if cancellation_flag.count() % (1u64 << 14) == 0 {
+        // TODO(kostya): delete
+        println!("=====DEBUG===== step={}", cancellation_flag.count());
+        println!(
+            "{}",
+            crate::format::write_string(&crate::format::RowMajorAscii::default(), grid)
+        );
+        println!("=====DEBUG=====");
+    }
+
     frame
         .grouped_by_unit
         .init(grid.iter_unset().map(|idx| (idx, constraints.domain(idx))));

@@ -398,7 +398,7 @@ where
         return Err(SolverError::Cancelled);
     }
 
-    match (1u8..=4u8)
+    match (1u8..=5u8)
         .map(|domain_size| {
             // TODO(kostya): filter cell combinations that were already visited
             frame
@@ -612,12 +612,12 @@ mod test {
 123456789
 456789123
 789123456
-231674895
-875912364
-694538217
-912345678
-547861932
-368297541"#
+261594378
+374812965
+598637214
+612345897
+835971642
+947268531"#
             .trim();
         let given = ArrGridRowMajor::new();
         let complete = write_string(

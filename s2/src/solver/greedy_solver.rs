@@ -172,44 +172,6 @@ impl GroupedByUnit {
     }
 }
 
-// #[derive(Debug)]
-// struct DiffVec {
-//     len: u8,
-//     elts: [(GridIdx, GridValue); GridIdx::COUNT],
-// }
-
-// impl Default for DiffVec {
-//     fn default() -> Self {
-//         Self {
-//             len: 0,
-//             elts: array::from_fn(|_| Default::default()),
-//         }
-//     }
-// }
-
-// impl DiffVec {
-//     fn clear(&mut self) {
-//         self.len = 0;
-//     }
-
-//     fn fill<I>(&mut self, iter: I)
-//     where
-//         I: Iterator<Item = (GridIdx, GridValue)>,
-//     {
-//         self.clear();
-//         let mut cnt = 0;
-//         for (mut_elt, elt) in zip(self.elts.iter_mut(), iter) {
-//             *mut_elt = elt;
-//             cnt += 1;
-//         }
-//         self.len = cnt;
-//     }
-
-//     fn iter(&self) -> impl Iterator<Item = &(GridIdx, GridValue)> {
-//         self.elts[..(self.len as usize)].iter()
-//     }
-// }
-
 #[derive(Debug, Default)]
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
@@ -439,17 +401,6 @@ where
 
     if cancellation_flag.cancelled() {
         return Err(SolverError::Cancelled);
-    }
-
-    if frame
-        .grouped_by_unit
-        .iter_equal_domains()
-        .any(|with_equal_domain| {
-            let domain_size = with_equal_domain.first().unwrap().0.size();
-            domain_size < (with_equal_domain.len() as u8)
-        })
-    {
-        return Err(SolverError::Infeasible);
     }
 
     frame.empty_cells.init(

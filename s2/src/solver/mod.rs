@@ -26,6 +26,13 @@ impl SolverError {
             Err(_) => None,
         }
     }
+
+    pub fn is_cancelled(&self) -> bool {
+        match self {
+            Self::Infeasible | Self::ConstraintsViolated => false,
+            Self::Cancelled => true,
+        }
+    }
 }
 
 pub trait Solver {

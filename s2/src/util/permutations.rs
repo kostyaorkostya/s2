@@ -58,10 +58,16 @@ impl<const LENGTH: usize> Permutator<LENGTH> {
     }
 }
 
-pub fn try_find<const LENGTH: usize, I, Elt, F, T, E>(mut iter: I, mut f: F) -> Result<T, E>
+pub fn try_find<const LENGTH: usize, I, Elt, F, T, E, Cancelled>(
+    mut iter: I,
+    mut f: F,
+    cancelled: Cancelled,
+) -> Result<T, E>
 where
+    Elt: Copy,
     I: Iterator<Item = Elt>,
-    F: for<'a> FnMut(&'a [Elt]) -> Result<T, E>,
+    F: for<'a> FnMut(&'a mut dyn Iterator<Item = Elt>) -> Result<T, E>,
+    Cancelled: Fn(&E) -> bool,
 {
     let mut arr: [Elt; LENGTH] = array::from_fn(|_| iter.next().unwrap());
     if let Some(_) = iter.next() {
@@ -72,9 +78,15 @@ where
     (1..=cnt)
         .map(|i| {
             permutator.next(&mut arr);
-            (i, f(&arr[..]))
+            (i, f(&mut arr.iter().copied()))
         })
-        .find(|(i, res)| *i == cnt || res.is_ok())
+        .find(|(i, res)| {
+            *i == cnt
+                || (match res {
+                    Ok(_) => true,
+                    Err(err) => cancelled(err),
+                })
+        })
         .unwrap()
         .1
 }

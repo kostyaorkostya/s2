@@ -730,4 +730,37 @@ _________
             .map(|grid| write_string(&RowMajorAscii::default(), &grid));
         assert_eq!(&expected, &complete.unwrap());
     }
+
+    #[test]
+    fn test_fuzzing_crash_2() {
+        // TODO(kostya): times out
+        let given = r#"
+3417_6___
+____958__
+_______7_
+__916____
+754______
+___958___
+_958__2__
+____7_6__
+______958
+"#
+        .trim();
+        let expected = r#"
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+_________
+"#
+        .trim();
+        let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();
+        let complete = solve_with_timeout(&given, Duration::from_secs(1))
+            .map(|grid| write_string(&RowMajorAscii::default(), &grid));
+        assert_eq!(&expected, &complete.unwrap());
+    }
 }

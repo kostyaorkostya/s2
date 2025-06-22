@@ -11,6 +11,10 @@ path = "src/examples/example_1.rs"
 name = "example-2"
 path = "src/examples/example_2.rs"
 
+[[bin]]
+name = "example-3"
+path = "src/examples/example_3.rs"
+
 [profile.release-lto]
 inherits = "release"
 lto = true

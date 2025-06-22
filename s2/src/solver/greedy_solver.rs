@@ -403,7 +403,7 @@ where
         return Err(SolverError::Cancelled);
     }
 
-    match (1u8..=5u8)
+    match (1u8..=4u8)
         .map(|domain_size| {
             // TODO(kostya): filter cell combinations that were already visited
             frame
@@ -411,6 +411,7 @@ where
                 .iter_equal_domains()
                 .filter(|with_equal_domain| {
                     with_equal_domain.first().unwrap().0.size() == domain_size
+                        && with_equal_domain.len() == domain_size as usize
                 })
                 .map(|with_equal_domain| match domain_size {
                     1 => permutations::try_find::<1, _, _, _, _, _, _>(
@@ -619,9 +620,9 @@ mod test {
 231674895
 875912364
 694538217
-317265948
-542897631
-968341572"#
+912345678
+547861932
+368297541"#
             .trim();
         let given = ArrGridRowMajor::new();
         let complete = write_string(

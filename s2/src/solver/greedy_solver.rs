@@ -215,7 +215,7 @@ impl<'a> From<&'a mut Stack> for StackTail<'a> {
 impl<'caller> StackTail<'caller> {
     fn with<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut StackFrame, &mut StackTail<'_>) -> R,
+        F: for<'a> FnOnce(&'a mut StackFrame, &mut StackTail<'a>) -> R,
     {
         let (frame, tail) = self.0.split_first_mut().unwrap();
         frame.clear();
@@ -254,7 +254,7 @@ impl<'a> From<&'a mut Diff> for DiffTail<'a> {
     }
 }
 
-impl<'a> DiffTail<'a> {
+impl<'caller> DiffTail<'caller> {
     fn push<I>(&mut self, iter: I) -> usize
     where
         I: Iterator<Item = (GridIdx, GridValue)>,
@@ -277,7 +277,11 @@ impl<'a> DiffTail<'a> {
     where
         I: Iterator<Item = (GridIdx, GridValue)>,
         G: GridMut,
-        F: FnOnce(&mut G, &mut Constraints, &mut DiffTail<'_>) -> Result<usize, SolverError>,
+        F: for<'a> FnOnce(
+            &'a mut G,
+            &'a mut Constraints,
+            &'a mut DiffTail<'a>,
+        ) -> Result<usize, SolverError>,
     {
         let cnt = self.push(iter);
         let (head, tail) = self.0.split_at_mut(cnt);
@@ -403,45 +407,44 @@ where
         return Err(SolverError::Cancelled);
     }
 
-    (1u8..=5u8)
-        .rev()
-        .map(|domain_size| {
-            let try_find = match domain_size {
-                1 => permutations::try_find::<1, _, _, _, _, _>,
-                2 => permutations::try_find::<2, _, _, _, _, _>,
-                3 => permutations::try_find::<3, _, _, _, _, _>,
-                4 => permutations::try_find::<4, _, _, _, _, _>,
-                5 => permutations::try_find::<5, _, _, _, _, _>,
-                _ => panic!("unreachable"),
-            };
-            // TODO(kostya): filter cell combinations that were already visited
-            frame
-                .grouped_by_unit
-                .iter_equal_domains()
-                .filter(|with_equal_domain| {
-                    with_equal_domain.first().unwrap().0.size() == domain_size
-                })
-                .map(|with_equal_domain| {
-                    let domain = with_equal_domain.first().unwrap().0;
-                    try_find(domain.iter(), |values: &[GridValue]| {
-                        solve_inner(
-                            zip(
-                                with_equal_domain.iter().map(|(_, x)| x).copied(),
-                                values.iter().copied(),
-                            ),
-                            cancellation_flag,
-                            grid,
-                            constraints,
-                            stack,
-                            diff,
-                        )
-                    })
-                })
-                .find_map(SolverError::ok_or_cancelled)
-                .ok_or(SolverError::Infeasible)?
-        })
-        .find_map(SolverError::ok_or_cancelled)
-        .ok_or(SolverError::Infeasible)?;
+    // (1u8..=5u8)
+    //     .rev()
+    //     .map(|domain_size| {
+    //         let try_find = match domain_size {
+    //             1 => permutations::try_find::<1, _, _, _, _, _>,
+    //             2 => permutations::try_find::<2, _, _, _, _, _>,
+    //             3 => permutations::try_find::<3, _, _, _, _, _>,
+    //             4 => permutations::try_find::<4, _, _, _, _, _>,
+    //             5 => permutations::try_find::<5, _, _, _, _, _>,
+    //             _ => panic!("unreachable"),
+    //         };
+    //         // TODO(kostya): filter cell combinations that were already visited
+    //         frame
+    //             .grouped_by_unit
+    //             .iter_equal_domains()
+    //             .filter(|with_equal_domain| {
+    //                 with_equal_domain.first().unwrap().0.size() == domain_size
+    //             })
+    //             .map(|with_equal_domain| {
+    //                 try_find(with_equal_domain.first().unwrap().0.iter(), |values| {
+    //                     solve_inner(
+    //                         zip(
+    //                             with_equal_domain.iter().map(|(_, x)| x).copied(),
+    //                             values.iter().copied(),
+    //                         ),
+    //                         cancellation_flag,
+    //                         grid,
+    //                         constraints,
+    //                         stack,
+    //                         diff,
+    //                     )
+    //                 })
+    //             })
+    //             .find_map(SolverError::ok_or_cancelled)
+    //             .ok_or(SolverError::Infeasible)?
+    //     })
+    //     .find_map(SolverError::ok_or_cancelled)
+    //     .ok_or(SolverError::Infeasible)?;
 
     frame.empty_cells.init(
         grid.iter_unset()

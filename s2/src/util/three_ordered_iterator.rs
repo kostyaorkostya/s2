@@ -22,7 +22,7 @@ where
     I2: Iterator<Item = T>,
     I3: Iterator<Item = T>,
 {
-    fn new(compare: Cmp, mut i1: I1, mut i2: I2, mut i3: I3) -> Self {
+    pub fn new(compare: Cmp, mut i1: I1, mut i2: I2, mut i3: I3) -> Self {
         let cur = [i1.next(), i2.next(), i3.next()];
         Self {
             cur,

@@ -61,7 +61,7 @@ impl<const LENGTH: usize> Permutator<LENGTH> {
 pub fn try_find<const LENGTH: usize, I, Elt, F, T, E>(mut iter: I, mut f: F) -> Result<T, E>
 where
     I: Iterator<Item = Elt>,
-    F: FnMut(&[Elt]) -> Result<T, E>,
+    F: for<'a> FnMut(&'a [Elt]) -> Result<T, E>,
 {
     let mut arr: [Elt; LENGTH] = array::from_fn(|_| iter.next().unwrap());
     if let Some(_) = iter.next() {

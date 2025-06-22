@@ -143,6 +143,7 @@ impl GroupedByUnit {
             box_.1[box_.0 as usize] = (domain, idx);
             box_.0 += 1;
         });
+        // TODO(kostya): random shuffle within the set that has the same domain within unit.
         self.rows
             .iter_mut()
             .chain(self.cols.iter_mut())

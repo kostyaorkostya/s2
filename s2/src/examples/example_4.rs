@@ -9,15 +9,15 @@ use std::time::Duration;
 
 fn create_grid() -> ArrGridRowMajor {
     let grid = r#"
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-_________
+3417_6___
+____958__
+_______7_
+__916____
+754______
+___958___
+_958__2__
+____7_6__
+______958
 "#
     .trim();
     read_from_string(&RowMajorAscii::default(), grid).unwrap()

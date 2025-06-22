@@ -40,7 +40,6 @@ fn main() {
             }
         }
     });
-    // Before introduction of naked singles this example used to timeout.
     thread::sleep(Duration::from_secs(30));
     cancel.cancel();
     solve.join().unwrap();

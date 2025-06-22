@@ -700,6 +700,7 @@ _4_8_____
 
     #[test]
     fn test_fuzzing_crash_1() {
+        // Used to timeout before introduction of locked sets.
         let given = r#"
 _________
 _________
@@ -712,7 +713,6 @@ _________
 8________
 "#
         .trim();
-        // TODO(kostya): update once fixed
         let expected = r#"
 145236789
 267589134

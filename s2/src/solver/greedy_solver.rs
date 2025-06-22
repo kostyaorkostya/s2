@@ -116,17 +116,6 @@ impl EmptyCellsByDomainSize {
         let domain_size = domain_size as usize;
         &self.elts[domain_size][..(self.len[domain_size] as usize)]
     }
-
-    fn maybe_ok_or_infeasible(&self) -> Option<bool> {
-        let (zero_sized_len, non_zero_sized_lens) = self.len[..].split_first().unwrap();
-        if *zero_sized_len != 0 {
-            Some(false)
-        } else if non_zero_sized_lens.iter().all(|len| *len == 0) {
-            Some(true)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Default)]
@@ -425,21 +414,6 @@ where
     C: CancellationFlag,
     G: GridMut,
 {
-    frame.empty_cells.init(
-        grid.iter_unset()
-            .map(|idx| (idx, constraints.domain(idx).size())),
-    );
-
-    if let Some(ok_or_infeasible) = frame.empty_cells.maybe_ok_or_infeasible() {
-        return if ok_or_infeasible {
-            Ok(0)
-        } else {
-            Err(SolverError::Infeasible)
-        };
-    } else if cancellation_flag.cancelled() {
-        return Err(SolverError::Cancelled);
-    }
-
     frame
         .grouped_by_unit
         .init(grid.iter_unset().map(|idx| (idx, constraints.domain(idx))));
@@ -463,6 +437,10 @@ where
         _ => (),
     }
 
+    if cancellation_flag.cancelled() {
+        return Err(SolverError::Cancelled);
+    }
+
     if frame
         .grouped_by_unit
         .iter_equal_domains()
@@ -473,6 +451,11 @@ where
     {
         return Err(SolverError::Infeasible);
     }
+
+    frame.empty_cells.init(
+        grid.iter_unset()
+            .map(|idx| (idx, constraints.domain(idx).size())),
+    );
 
     match frame.empty_cells.of_domain_size(1) {
         [] => (),

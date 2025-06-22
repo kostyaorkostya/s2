@@ -408,97 +408,93 @@ where
     }
 
     match (1u8..=5u8)
-        .map(|domain_size| {
-            // TODO(kostya): filter cell combinations that were already visited
+        .flat_map(|locked_set_size| {
             frame
                 .grouped_by_unit
                 .iter_equal_domains()
-                .filter(|with_equal_domain| {
-                    with_equal_domain.len() == domain_size as usize
-                        && with_equal_domain.first().unwrap().0.size() == domain_size
+                .filter(move |with_equal_domain| {
+                    with_equal_domain.len() == locked_set_size as usize
+                        && with_equal_domain.first().unwrap().0.size() == locked_set_size
                 })
-                .map(|with_equal_domain| match domain_size {
-                    1 => permutations::try_find::<1, _, _, _, _, _, _>(
-                        with_equal_domain.first().unwrap().0.iter(),
-                        |values| {
-                            solve_inner(
-                                zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                                cancellation_flag,
-                                grid,
-                                constraints,
-                                stack,
-                                diff,
-                            )
-                        },
-                        SolverError::is_cancelled,
-                    ),
-                    2 => permutations::try_find::<2, _, _, _, _, _, _>(
-                        with_equal_domain.first().unwrap().0.iter(),
-                        |values| {
-                            solve_inner(
-                                zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                                cancellation_flag,
-                                grid,
-                                constraints,
-                                stack,
-                                diff,
-                            )
-                        },
-                        SolverError::is_cancelled,
-                    ),
-                    3 => permutations::try_find::<3, _, _, _, _, _, _>(
-                        with_equal_domain.first().unwrap().0.iter(),
-                        |values| {
-                            solve_inner(
-                                zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                                cancellation_flag,
-                                grid,
-                                constraints,
-                                stack,
-                                diff,
-                            )
-                        },
-                        SolverError::is_cancelled,
-                    ),
-                    4 => permutations::try_find::<4, _, _, _, _, _, _>(
-                        with_equal_domain.first().unwrap().0.iter(),
-                        |values| {
-                            solve_inner(
-                                zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                                cancellation_flag,
-                                grid,
-                                constraints,
-                                stack,
-                                diff,
-                            )
-                        },
-                        SolverError::is_cancelled,
-                    ),
-                    5 => permutations::try_find::<5, _, _, _, _, _, _>(
-                        with_equal_domain.first().unwrap().0.iter(),
-                        |values| {
-                            solve_inner(
-                                zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                                cancellation_flag,
-                                grid,
-                                constraints,
-                                stack,
-                                diff,
-                            )
-                        },
-                        SolverError::is_cancelled,
-                    ),
-                    _ => panic!("unreachable"),
-                })
-                .find_map(SolverError::ok_or_cancelled)
-                .ok_or(SolverError::Infeasible)?
         })
-        .find_map(SolverError::ok_or_cancelled)
-        .ok_or(SolverError::Infeasible)
-        .and_then(|x| x)
-    {
-        res @ (Ok(_) | Err(SolverError::Cancelled)) => return res,
-        Err(_) => (),
+        .next()
+        .map(
+            |with_equal_domain| match with_equal_domain.first().unwrap().0.size() {
+                1 => permutations::try_find::<1, _, _, _, _, _, _>(
+                    with_equal_domain.first().unwrap().0.iter(),
+                    |values| {
+                        solve_inner(
+                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
+                            cancellation_flag,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    },
+                    SolverError::is_cancelled,
+                ),
+                2 => permutations::try_find::<2, _, _, _, _, _, _>(
+                    with_equal_domain.first().unwrap().0.iter(),
+                    |values| {
+                        solve_inner(
+                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
+                            cancellation_flag,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    },
+                    SolverError::is_cancelled,
+                ),
+                3 => permutations::try_find::<3, _, _, _, _, _, _>(
+                    with_equal_domain.first().unwrap().0.iter(),
+                    |values| {
+                        solve_inner(
+                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
+                            cancellation_flag,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    },
+                    SolverError::is_cancelled,
+                ),
+                4 => permutations::try_find::<4, _, _, _, _, _, _>(
+                    with_equal_domain.first().unwrap().0.iter(),
+                    |values| {
+                        solve_inner(
+                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
+                            cancellation_flag,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    },
+                    SolverError::is_cancelled,
+                ),
+                5 => permutations::try_find::<5, _, _, _, _, _, _>(
+                    with_equal_domain.first().unwrap().0.iter(),
+                    |values| {
+                        solve_inner(
+                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
+                            cancellation_flag,
+                            grid,
+                            constraints,
+                            stack,
+                            diff,
+                        )
+                    },
+                    SolverError::is_cancelled,
+                ),
+                _ => panic!("unreachable"),
+            },
+        ) {
+        None => (),
+        Some(res) => return res,
     };
 
     frame.empty_cells.init(
@@ -718,15 +714,15 @@ _________
         .trim();
         // TODO(kostya): update once fixed
         let expected = r#"
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-_________
-_________
+145236789
+267589134
+389147256
+431852967
+572693841
+698714325
+713468592
+924375618
+856921473
 "#
         .trim();
         let given: ArrGridRowMajor = read_from_string(&RowMajorAscii::default(), given).unwrap();

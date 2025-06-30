@@ -298,15 +298,15 @@ impl std::fmt::Display for GridValue {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GridIdx {
-    pub i: RowIdx,
-    pub j: ColIdx,
+    pub row: RowIdx,
+    pub col: ColIdx,
 }
 
 impl From<&(RowIdx, ColIdx)> for GridIdx {
     fn from(v: &(RowIdx, ColIdx)) -> Self {
         Self {
-            i: v.0.clone(),
-            j: v.1.clone(),
+            row: v.0.clone(),
+            col: v.1.clone(),
         }
     }
 }
@@ -320,8 +320,8 @@ impl From<(RowIdx, ColIdx)> for GridIdx {
 impl From<(&RowIdx, ColIdx)> for GridIdx {
     fn from(v: (&RowIdx, ColIdx)) -> Self {
         Self {
-            i: v.0.clone(),
-            j: v.1,
+            row: v.0.clone(),
+            col: v.1,
         }
     }
 }
@@ -329,15 +329,15 @@ impl From<(&RowIdx, ColIdx)> for GridIdx {
 impl From<(RowIdx, &ColIdx)> for GridIdx {
     fn from(v: (RowIdx, &ColIdx)) -> Self {
         Self {
-            i: v.0,
-            j: v.1.clone(),
+            row: v.0,
+            col: v.1.clone(),
         }
     }
 }
 
 impl From<&GridIdx> for (RowIdx, ColIdx) {
     fn from(v: &GridIdx) -> Self {
-        (v.i.clone(), v.j.clone())
+        (v.row.clone(), v.col.clone())
     }
 }
 
@@ -351,8 +351,8 @@ impl GridIdx {
     pub const COUNT: usize = RowIdx::COUNT * ColIdx::COUNT;
 
     pub fn row_major(&self) -> usize {
-        let i: usize = self.i.into();
-        let j: usize = self.j.into();
+        let i: usize = self.row.into();
+        let j: usize = self.col.into();
         i * RowIdx::COUNT + j
     }
 
@@ -363,8 +363,8 @@ impl GridIdx {
     }
 
     pub fn col_major(&self) -> usize {
-        let i: usize = self.i.into();
-        let j: usize = self.j.into();
+        let i: usize = self.row.into();
+        let j: usize = self.col.into();
         j * ColIdx::COUNT + i
     }
 
@@ -375,8 +375,8 @@ impl GridIdx {
     }
 
     pub fn box_(&self) -> usize {
-        let i: usize = self.i.into();
-        let j: usize = self.j.into();
+        let i: usize = self.row.into();
+        let j: usize = self.col.into();
         (i / 3 * 3) + j / 3
     }
 

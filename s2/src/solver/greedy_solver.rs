@@ -38,7 +38,7 @@ impl Constraints {
     }
 
     fn constraint_indices(idx: GridIdx) -> (u8, u8, u8) {
-        (idx.i.into(), idx.j.into(), idx.box_() as u8)
+        (idx.row.into(), idx.col.into(), idx.box_() as u8)
     }
 
     fn set(&mut self, idx: GridIdx, value: GridValue) {
@@ -140,10 +140,10 @@ impl GroupedByUnit {
     {
         self.clear();
         iter.for_each(|(idx, domain)| {
-            let row: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.rows[usize::from(idx.i)];
+            let row: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.rows[usize::from(idx.row)];
             row.1[row.0 as usize] = (domain, idx);
             row.0 += 1;
-            let col: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.cols[usize::from(idx.j)];
+            let col: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.cols[usize::from(idx.col)];
             col.1[col.0 as usize] = (domain, idx);
             col.0 += 1;
             let box_: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.boxes[idx.box_()];

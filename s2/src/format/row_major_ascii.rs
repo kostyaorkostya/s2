@@ -31,7 +31,7 @@ impl<'a> RowMajorAsciiReadState<'a> {
 
     fn inc(&mut self) {
         let idx = GridIdx::try_of_row_major(self.row_major_idx).unwrap();
-        if idx.i < RowIdx::I8 && idx.j == ColIdx::J8 {
+        if idx.row < RowIdx::I8 && idx.col == ColIdx::J8 {
             self.row_sep_expected = self.formatter.row_sep.is_some();
         };
         self.row_major_idx += 1;
@@ -108,7 +108,7 @@ impl WriteFormatter for RowMajorAscii {
         GridIdx::iter_row_wise().try_fold(0, |res, idx| {
             let cell = grid[idx].map(|x| x.into_ascii()).unwrap_or(self.empty_cell);
             let cell = writer.write(slice::from_ref(&cell))?;
-            let row_sep = if idx.i != RowIdx::I8 && idx.j == ColIdx::J8 {
+            let row_sep = if idx.row != RowIdx::I8 && idx.col == ColIdx::J8 {
                 self.row_sep
                     .map_or(Ok(0), |x| writer.write(slice::from_ref(&x)))
             } else {

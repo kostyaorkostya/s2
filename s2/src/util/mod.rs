@@ -6,4 +6,3 @@ mod domain;
 pub use domain::Domain;
 mod slice_group_by_iterator;
 pub use slice_group_by_iterator::SliceGroupByIterator;
-pub mod permutations;

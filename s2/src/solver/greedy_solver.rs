@@ -4,7 +4,8 @@ use crate::grid;
 use crate::grid::{
     ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
 };
-use crate::util::{permutations, BoolMatrix9x9, Domain, SliceGroupByIterator};
+use crate::permutator::Permutator;
+use crate::util::{BoolMatrix9x9, Domain, SliceGroupByIterator};
 use std::array;
 use std::iter::{empty, once, zip};
 use strum::EnumCount;
@@ -169,6 +170,7 @@ impl GroupedByUnit {
 struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
     grouped_by_unit: GroupedByUnit,
+    permutator: Permutator<5, GridValue>,
 }
 
 impl StackFrame {
@@ -423,81 +425,25 @@ where
                 })
         })
         .next()
-        .map(
-            |with_equal_domain| match with_equal_domain.first().unwrap().0.size() {
-                1 => permutations::try_find::<1, _, _, _, _, _, _>(
-                    with_equal_domain.first().unwrap().0.iter(),
-                    |values| {
-                        solve_inner(
-                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                            cancellation_flag,
-                            grid,
-                            constraints,
-                            stack,
-                            diff,
-                        )
-                    },
-                    SolverError::is_cancelled,
-                ),
-                2 => permutations::try_find::<2, _, _, _, _, _, _>(
-                    with_equal_domain.first().unwrap().0.iter(),
-                    |values| {
-                        solve_inner(
-                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                            cancellation_flag,
-                            grid,
-                            constraints,
-                            stack,
-                            diff,
-                        )
-                    },
-                    SolverError::is_cancelled,
-                ),
-                3 => permutations::try_find::<3, _, _, _, _, _, _>(
-                    with_equal_domain.first().unwrap().0.iter(),
-                    |values| {
-                        solve_inner(
-                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                            cancellation_flag,
-                            grid,
-                            constraints,
-                            stack,
-                            diff,
-                        )
-                    },
-                    SolverError::is_cancelled,
-                ),
-                4 => permutations::try_find::<4, _, _, _, _, _, _>(
-                    with_equal_domain.first().unwrap().0.iter(),
-                    |values| {
-                        solve_inner(
-                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                            cancellation_flag,
-                            grid,
-                            constraints,
-                            stack,
-                            diff,
-                        )
-                    },
-                    SolverError::is_cancelled,
-                ),
-                5 => permutations::try_find::<5, _, _, _, _, _, _>(
-                    with_equal_domain.first().unwrap().0.iter(),
-                    |values| {
-                        solve_inner(
-                            zip(with_equal_domain.iter().map(|(_, x)| x).copied(), values),
-                            cancellation_flag,
-                            grid,
-                            constraints,
-                            stack,
-                            diff,
-                        )
-                    },
-                    SolverError::is_cancelled,
-                ),
-                _ => panic!("unreachable"),
-            },
-        ) {
+        .map(|with_equal_domain| {
+            frame.permutator.try_find(
+                with_equal_domain.first().unwrap().0.iter(),
+                |values| {
+                    solve_inner(
+                        zip(
+                            with_equal_domain.iter().map(|(_, x)| x).copied(),
+                            values.iter().copied(),
+                        ),
+                        cancellation_flag,
+                        grid,
+                        constraints,
+                        stack,
+                        diff,
+                    )
+                },
+                SolverError::is_cancelled,
+            )
+        }) {
         None => (),
         Some(res) => return res,
     };

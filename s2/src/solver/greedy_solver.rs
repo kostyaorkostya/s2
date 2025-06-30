@@ -10,6 +10,10 @@ use std::array;
 use std::iter::{empty, once, zip};
 use strum::EnumCount;
 
+// TODO(kostya): delete
+const DEBUG_ITER_STATE: bool = false;
+const DEBUG_RECUSION_DEPTH: bool = true;
+
 #[derive(Debug, Default)]
 struct Constraints {
     rows: BoolMatrix9x9,
@@ -168,6 +172,7 @@ impl GroupedByUnit {
 
 #[derive(Debug, Default)]
 struct StackFrame {
+    count: u64, // TODO(kostya): remove it
     empty_cells: EmptyCellsByDomainSize,
     grouped_by_unit: GroupedByUnit,
     permutator: Permutator<5, GridValue>,
@@ -188,6 +193,12 @@ struct Stack([StackFrame; SOLVER_RECURSIVE_DEPTH]);
 impl Default for Stack {
     fn default() -> Self {
         Self(array::from_fn(|_| StackFrame::default()))
+    }
+}
+
+impl Stack {
+    fn iter(&self) -> impl Iterator<Item = &StackFrame> {
+        self.0.iter()
     }
 }
 
@@ -373,8 +384,11 @@ where
     C: CancellationFlag,
     G: GridMut,
 {
-    if cancellation_flag.count() % (1u64 << 14) == 0 {
-        // TODO(kostya): delete
+    if DEBUG_RECUSION_DEPTH {
+        frame.count += 1;
+    }
+
+    if DEBUG_ITER_STATE && cancellation_flag.count() % (1u64 << 14) == 0 {
         println!("=====DEBUG===== step={}", cancellation_flag.count());
         println!(
             "{}",
@@ -526,6 +540,13 @@ impl Solver for GreedySolver {
                     }
                 }
             })?;
+        if DEBUG_RECUSION_DEPTH {
+            println!("Recusion depth statistics:");
+            mem.stack
+                .iter()
+                .enumerate()
+                .for_each(|(depth, frame)| println!("{:?}: {:?}", depth, frame.count))
+        }
         Ok(mem.diff.iter(len).collect::<U>())
     }
 }

@@ -38,6 +38,7 @@ impl<const LENGTH: usize, Elt> Permutator<LENGTH, Elt>
 where
     Elt: Default + Copy,
 {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Default::default()
     }
@@ -110,6 +111,7 @@ where
             .1
     }
 
+    #[allow(dead_code)]
     pub fn for_each<I, F>(&mut self, iter: I, mut f: F)
     where
         I: Iterator<Item = Elt>,

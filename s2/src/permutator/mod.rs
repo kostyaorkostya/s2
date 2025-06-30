@@ -43,6 +43,7 @@ where
         Default::default()
     }
 
+    // Heap's algorithm turned into a state machine that yields one permutation at a time.
     fn next(&mut self, len: usize) {
         while self.i < len {
             match self.state {

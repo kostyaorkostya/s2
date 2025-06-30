@@ -13,6 +13,7 @@ use strum::EnumCount;
 // TODO(kostya): delete
 const DEBUG_ITER_STATE: bool = false;
 const DEBUG_RECUSION_DEPTH: bool = true;
+const DEBUG_TOTAL_ITER_COUNT: bool = true;
 
 #[derive(Debug, Default)]
 struct Constraints {
@@ -539,7 +540,10 @@ impl Solver for GreedySolver {
                         err
                     }
                 }
-            })?;
+            });
+        if DEBUG_TOTAL_ITER_COUNT {
+            println!("Total iterations count: {:?}", cancellation_flag.count());
+        }
         if DEBUG_RECUSION_DEPTH {
             println!("Recusion depth statistics:");
             mem.stack
@@ -547,6 +551,7 @@ impl Solver for GreedySolver {
                 .enumerate()
                 .for_each(|(depth, frame)| println!("{:?}: {:?}", depth, frame.count))
         }
+        let len = len?;
         Ok(mem.diff.iter(len).collect::<U>())
     }
 }

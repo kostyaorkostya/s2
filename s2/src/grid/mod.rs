@@ -15,7 +15,7 @@ pub const DIM: usize = 9;
 #[derive(
     Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
 )]
-pub enum IIdx {
+pub enum RowIdx {
     #[default]
     I0,
     I1,
@@ -28,7 +28,7 @@ pub enum IIdx {
     I8,
 }
 
-impl TryFrom<&usize> for IIdx {
+impl TryFrom<&usize> for RowIdx {
     type Error = ();
 
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
@@ -47,7 +47,7 @@ impl TryFrom<&usize> for IIdx {
     }
 }
 
-impl TryFrom<usize> for IIdx {
+impl TryFrom<usize> for RowIdx {
     type Error = ();
 
     fn try_from(v: usize) -> Result<Self, Self::Error> {
@@ -55,37 +55,37 @@ impl TryFrom<usize> for IIdx {
     }
 }
 
-impl From<&IIdx> for u8 {
-    fn from(v: &IIdx) -> u8 {
+impl From<&RowIdx> for u8 {
+    fn from(v: &RowIdx) -> u8 {
         match v {
-            IIdx::I0 => 0,
-            IIdx::I1 => 1,
-            IIdx::I2 => 2,
-            IIdx::I3 => 3,
-            IIdx::I4 => 4,
-            IIdx::I5 => 5,
-            IIdx::I6 => 6,
-            IIdx::I7 => 7,
-            IIdx::I8 => 8,
+            RowIdx::I0 => 0,
+            RowIdx::I1 => 1,
+            RowIdx::I2 => 2,
+            RowIdx::I3 => 3,
+            RowIdx::I4 => 4,
+            RowIdx::I5 => 5,
+            RowIdx::I6 => 6,
+            RowIdx::I7 => 7,
+            RowIdx::I8 => 8,
         }
     }
 }
 
-impl From<IIdx> for u8 {
-    fn from(v: IIdx) -> u8 {
+impl From<RowIdx> for u8 {
+    fn from(v: RowIdx) -> u8 {
         (&v).into()
     }
 }
 
-impl From<&IIdx> for usize {
-    fn from(v: &IIdx) -> usize {
+impl From<&RowIdx> for usize {
+    fn from(v: &RowIdx) -> usize {
         let v: u8 = v.into();
         v.into()
     }
 }
 
-impl From<IIdx> for usize {
-    fn from(v: IIdx) -> usize {
+impl From<RowIdx> for usize {
+    fn from(v: RowIdx) -> usize {
         (&v).into()
     }
 }
@@ -93,7 +93,7 @@ impl From<IIdx> for usize {
 #[derive(
     Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
 )]
-pub enum JIdx {
+pub enum ColIdx {
     #[default]
     J0,
     J1,
@@ -106,7 +106,7 @@ pub enum JIdx {
     J8,
 }
 
-impl TryFrom<&usize> for JIdx {
+impl TryFrom<&usize> for ColIdx {
     type Error = ();
 
     fn try_from(item: &usize) -> Result<Self, Self::Error> {
@@ -125,7 +125,7 @@ impl TryFrom<&usize> for JIdx {
     }
 }
 
-impl TryFrom<usize> for JIdx {
+impl TryFrom<usize> for ColIdx {
     type Error = ();
 
     fn try_from(v: usize) -> Result<Self, Self::Error> {
@@ -133,37 +133,37 @@ impl TryFrom<usize> for JIdx {
     }
 }
 
-impl From<&JIdx> for u8 {
-    fn from(v: &JIdx) -> u8 {
+impl From<&ColIdx> for u8 {
+    fn from(v: &ColIdx) -> u8 {
         match v {
-            JIdx::J0 => 0,
-            JIdx::J1 => 1,
-            JIdx::J2 => 2,
-            JIdx::J3 => 3,
-            JIdx::J4 => 4,
-            JIdx::J5 => 5,
-            JIdx::J6 => 6,
-            JIdx::J7 => 7,
-            JIdx::J8 => 8,
+            ColIdx::J0 => 0,
+            ColIdx::J1 => 1,
+            ColIdx::J2 => 2,
+            ColIdx::J3 => 3,
+            ColIdx::J4 => 4,
+            ColIdx::J5 => 5,
+            ColIdx::J6 => 6,
+            ColIdx::J7 => 7,
+            ColIdx::J8 => 8,
         }
     }
 }
 
-impl From<JIdx> for u8 {
-    fn from(v: JIdx) -> u8 {
+impl From<ColIdx> for u8 {
+    fn from(v: ColIdx) -> u8 {
         (&v).into()
     }
 }
 
-impl From<&JIdx> for usize {
-    fn from(v: &JIdx) -> usize {
+impl From<&ColIdx> for usize {
+    fn from(v: &ColIdx) -> usize {
         let v: u8 = v.into();
         v.into()
     }
 }
 
-impl From<JIdx> for usize {
-    fn from(v: JIdx) -> usize {
+impl From<ColIdx> for usize {
+    fn from(v: ColIdx) -> usize {
         (&v).into()
     }
 }
@@ -298,12 +298,12 @@ impl std::fmt::Display for GridValue {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GridIdx {
-    pub i: IIdx,
-    pub j: JIdx,
+    pub i: RowIdx,
+    pub j: ColIdx,
 }
 
-impl From<&(IIdx, JIdx)> for GridIdx {
-    fn from(v: &(IIdx, JIdx)) -> Self {
+impl From<&(RowIdx, ColIdx)> for GridIdx {
+    fn from(v: &(RowIdx, ColIdx)) -> Self {
         Self {
             i: v.0.clone(),
             j: v.1.clone(),
@@ -311,14 +311,14 @@ impl From<&(IIdx, JIdx)> for GridIdx {
     }
 }
 
-impl From<(IIdx, JIdx)> for GridIdx {
-    fn from(v: (IIdx, JIdx)) -> Self {
+impl From<(RowIdx, ColIdx)> for GridIdx {
+    fn from(v: (RowIdx, ColIdx)) -> Self {
         (&v).into()
     }
 }
 
-impl From<(&IIdx, JIdx)> for GridIdx {
-    fn from(v: (&IIdx, JIdx)) -> Self {
+impl From<(&RowIdx, ColIdx)> for GridIdx {
+    fn from(v: (&RowIdx, ColIdx)) -> Self {
         Self {
             i: v.0.clone(),
             j: v.1,
@@ -326,8 +326,8 @@ impl From<(&IIdx, JIdx)> for GridIdx {
     }
 }
 
-impl From<(IIdx, &JIdx)> for GridIdx {
-    fn from(v: (IIdx, &JIdx)) -> Self {
+impl From<(RowIdx, &ColIdx)> for GridIdx {
+    fn from(v: (RowIdx, &ColIdx)) -> Self {
         Self {
             i: v.0,
             j: v.1.clone(),
@@ -335,42 +335,42 @@ impl From<(IIdx, &JIdx)> for GridIdx {
     }
 }
 
-impl From<&GridIdx> for (IIdx, JIdx) {
+impl From<&GridIdx> for (RowIdx, ColIdx) {
     fn from(v: &GridIdx) -> Self {
         (v.i.clone(), v.j.clone())
     }
 }
 
-impl From<GridIdx> for (IIdx, JIdx) {
+impl From<GridIdx> for (RowIdx, ColIdx) {
     fn from(v: GridIdx) -> Self {
         (&v).into()
     }
 }
 
 impl GridIdx {
-    pub const COUNT: usize = IIdx::COUNT * JIdx::COUNT;
+    pub const COUNT: usize = RowIdx::COUNT * ColIdx::COUNT;
 
     pub fn row_major(&self) -> usize {
         let i: usize = self.i.into();
         let j: usize = self.j.into();
-        i * IIdx::COUNT + j
+        i * RowIdx::COUNT + j
     }
 
     pub fn try_of_row_major(idx: usize) -> Result<Self, ()> {
-        let i: IIdx = (idx / IIdx::COUNT).try_into()?;
-        let j: JIdx = (idx % JIdx::COUNT).try_into()?;
+        let i: RowIdx = (idx / RowIdx::COUNT).try_into()?;
+        let j: ColIdx = (idx % ColIdx::COUNT).try_into()?;
         Ok((i, j).into())
     }
 
     pub fn col_major(&self) -> usize {
         let i: usize = self.i.into();
         let j: usize = self.j.into();
-        j * JIdx::COUNT + i
+        j * ColIdx::COUNT + i
     }
 
     pub fn try_of_col_major(idx: usize) -> Result<Self, ()> {
-        let j: JIdx = (idx / JIdx::COUNT).try_into()?;
-        let i: IIdx = (idx % IIdx::COUNT).try_into()?;
+        let j: ColIdx = (idx / ColIdx::COUNT).try_into()?;
+        let i: RowIdx = (idx % RowIdx::COUNT).try_into()?;
         Ok((i, j).into())
     }
 
@@ -381,12 +381,12 @@ impl GridIdx {
     }
 
     pub fn iter_row_wise() -> impl Iterator<Item = Self> {
-        IIdx::iter().cartesian_product(JIdx::iter()).map(Into::into)
+        RowIdx::iter().cartesian_product(ColIdx::iter()).map(Into::into)
     }
 
     pub fn iter_col_wise() -> impl Iterator<Item = Self> {
-        JIdx::iter()
-            .cartesian_product(IIdx::iter())
+        ColIdx::iter()
+            .cartesian_product(RowIdx::iter())
             .map(|(j, i)| (i, j))
             .map(Into::into)
     }
@@ -400,11 +400,11 @@ pub enum GridDiff {
 
 pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
     fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        GridIdx::iter_row_wise().map(|idx| (idx, self[idx].clone()))
+        GridIdx::iter_row_wise().map(|idx| (idx, self[idx]))
     }
 
     fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        GridIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
+        GridIdx::iter_col_wise().map(|idx| (idx, self[idx]))
     }
 
     fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {

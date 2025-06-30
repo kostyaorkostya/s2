@@ -1,4 +1,4 @@
-use super::grid::{Grid, GridIdx, GridMut, GridMutWithDefault, IIdx};
+use super::grid::{Grid, GridIdx, GridMut, GridMutWithDefault, RowIdx};
 use std::io::{Cursor, Read, Write};
 use strum::EnumCount;
 
@@ -50,7 +50,7 @@ where
     F: WriteFormatter,
     G: Grid + ?Sized,
 {
-    let mut cursor = Cursor::new(Vec::with_capacity(GridIdx::COUNT + IIdx::COUNT - 1));
+    let mut cursor = Cursor::new(Vec::with_capacity(GridIdx::COUNT + RowIdx::COUNT - 1));
     f.write(grid, &mut cursor).unwrap();
     String::from_utf8(cursor.into_inner()).unwrap()
 }

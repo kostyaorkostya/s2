@@ -13,7 +13,7 @@ where
     Elt: Default + Copy,
 {
     state: State,
-    i: usize,
+    i: u8,
     stack: [u8; LENGTH],
     arr: [Elt; LENGTH],
 }
@@ -45,7 +45,7 @@ where
 
     // Heap's algorithm turned into a state machine that yields one permutation at a time.
     fn next(&mut self, len: usize) {
-        while self.i < len {
+        while (self.i as usize) < len {
             match self.state {
                 State::Preamble => {
                     self.i = 1;
@@ -53,7 +53,7 @@ where
                     return;
                 }
                 State::Loop => {
-                    if (self.stack[self.i] as usize) < self.i {
+                    if (self.stack[self.i as usize] as usize) < self.i as usize {
                         self.arr.swap(
                             self.i as usize,
                             if self.i % 2 == 0 {

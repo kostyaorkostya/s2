@@ -1,4 +1,4 @@
-use crate::grid::{GridIdx, GridValue, IIdx, JIdx};
+use crate::grid::{GridIdx, GridValue, RowIdx, ColIdx};
 use itertools::Itertools;
 use std::iter::{repeat, zip};
 use std::ops::{Index, IndexMut};
@@ -88,18 +88,18 @@ pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, SudokuStatusError>
 where
     T: Index<GridIdx, Output = Option<GridValue>>,
 {
-    let rows = IIdx::iter()
+    let rows = RowIdx::iter()
         .map(|i| {
-            zip(repeat(i), JIdx::iter())
+            zip(repeat(i), ColIdx::iter())
                 .map(|idx| grid[idx.into()])
                 .collect::<Counter>()
                 .eval_status()
                 .map(Into::into)
         })
         .try_fold(true, |acc, x| x.map(|x| acc && x))?;
-    let cols = JIdx::iter()
+    let cols = ColIdx::iter()
         .map(|j| {
-            zip(IIdx::iter(), repeat(j))
+            zip(RowIdx::iter(), repeat(j))
                 .map(|idx| grid[idx.into()])
                 .collect::<Counter>()
                 .eval_status()
@@ -113,8 +113,8 @@ where
                 .cartesian_product(0..3)
                 .map(|(i_in_subgrid, j_in_subgrid)| {
                     (
-                        IIdx::try_from(i_subgrid * 3 + i_in_subgrid).unwrap(),
-                        JIdx::try_from(j_subgrid * 3 + j_in_subgrid).unwrap(),
+                        RowIdx::try_from(i_subgrid * 3 + i_in_subgrid).unwrap(),
+                        ColIdx::try_from(j_subgrid * 3 + j_in_subgrid).unwrap(),
                     )
                 })
                 .map(|idx| grid[idx.into()])

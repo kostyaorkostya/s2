@@ -12,7 +12,8 @@ use strum::EnumCount;
 
 // TODO(kostya): delete
 const DEBUG_ITER_STATE: bool = false;
-const DEBUG_RECUSION_DEPTH: bool = true;
+const DEBUG_ITER_STATE_EACH: bool = false;
+const DEBUG_RECUSION_DEPTH: bool = false;
 const DEBUG_TOTAL_ITER_COUNT: bool = true;
 
 #[derive(Debug, Default)]
@@ -389,7 +390,8 @@ where
         frame.count += 1;
     }
 
-    if DEBUG_ITER_STATE && cancellation_flag.count() % (1u64 << 14) == 0 {
+    if DEBUG_ITER_STATE && (DEBUG_ITER_STATE_EACH || cancellation_flag.count() % (1u64 << 14) == 0)
+    {
         println!("=====DEBUG===== step={}", cancellation_flag.count());
         println!(
             "{}",

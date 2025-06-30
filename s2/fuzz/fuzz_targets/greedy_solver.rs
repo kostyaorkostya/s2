@@ -22,7 +22,6 @@ where
         let cancellation_flag = cancellation_flag.clone();
         GreedySolver::new().solve::<_, _, Vec<_>>(cancellation_flag.as_ref(), &grid)
     });
-    // Before introduction of naked singles this example used to timeout.
     thread::sleep(timeout);
     cancel.cancel();
     let diff = solve.join().unwrap()?;

@@ -36,7 +36,7 @@ where
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(grid) = str::from_utf8(data) && let Ok(grid) =
-            read_from_string::<_, ArrGridRowMajor>(&RowMajorAscii::default(), &grid.trim())
+            read_from_string::<_, ArrGridRowMajor>(&RowMajorAscii::default(), grid.trim())
             && let Ok(status) = eval_status(&grid) {
                 match status {
                     SudokuStatus::Complete => (),

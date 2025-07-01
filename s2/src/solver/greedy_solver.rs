@@ -586,7 +586,7 @@ mod test {
         let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
         assert_eq!(
             &SudokuStatus::Complete,
-            &eval_status(&complete).expect(&format!("{:?}\n{:?}", grid, &complete))
+            &eval_status(&complete).unwrap_or_else(|err| panic!("{:?\n}{:?}\n{:?}", err,grid, &complete))
         );
         Ok(complete)
     }

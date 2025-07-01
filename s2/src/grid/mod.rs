@@ -17,15 +17,15 @@ pub const DIM: usize = 9;
 )]
 pub enum RowIdx {
     #[default]
-    I0,
-    I1,
-    I2,
-    I3,
-    I4,
-    I5,
-    I6,
-    I7,
-    I8,
+    Row0,
+    Row1,
+    Row2,
+    Row3,
+    Row4,
+    Row5,
+    Row6,
+    Row7,
+    Row8,
 }
 
 impl TryFrom<&usize> for RowIdx {
@@ -33,15 +33,15 @@ impl TryFrom<&usize> for RowIdx {
 
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
         match v {
-            0 => Ok(Self::I0),
-            1 => Ok(Self::I1),
-            2 => Ok(Self::I2),
-            3 => Ok(Self::I3),
-            4 => Ok(Self::I4),
-            5 => Ok(Self::I5),
-            6 => Ok(Self::I6),
-            7 => Ok(Self::I7),
-            8 => Ok(Self::I8),
+            0 => Ok(Self::Row0),
+            1 => Ok(Self::Row1),
+            2 => Ok(Self::Row2),
+            3 => Ok(Self::Row3),
+            4 => Ok(Self::Row4),
+            5 => Ok(Self::Row5),
+            6 => Ok(Self::Row6),
+            7 => Ok(Self::Row7),
+            8 => Ok(Self::Row8),
             _ => Err(()),
         }
     }
@@ -58,15 +58,15 @@ impl TryFrom<usize> for RowIdx {
 impl From<&RowIdx> for u8 {
     fn from(v: &RowIdx) -> u8 {
         match v {
-            RowIdx::I0 => 0,
-            RowIdx::I1 => 1,
-            RowIdx::I2 => 2,
-            RowIdx::I3 => 3,
-            RowIdx::I4 => 4,
-            RowIdx::I5 => 5,
-            RowIdx::I6 => 6,
-            RowIdx::I7 => 7,
-            RowIdx::I8 => 8,
+            RowIdx::Row0 => 0,
+            RowIdx::Row1 => 1,
+            RowIdx::Row2 => 2,
+            RowIdx::Row3 => 3,
+            RowIdx::Row4 => 4,
+            RowIdx::Row5 => 5,
+            RowIdx::Row6 => 6,
+            RowIdx::Row7 => 7,
+            RowIdx::Row8 => 8,
         }
     }
 }
@@ -95,15 +95,15 @@ impl From<RowIdx> for usize {
 )]
 pub enum ColIdx {
     #[default]
-    J0,
-    J1,
-    J2,
-    J3,
-    J4,
-    J5,
-    J6,
-    J7,
-    J8,
+    Col0,
+    Col1,
+    Col2,
+    Col3,
+    Col4,
+    Col5,
+    Col6,
+    Col7,
+    Col8,
 }
 
 impl TryFrom<&usize> for ColIdx {
@@ -111,15 +111,15 @@ impl TryFrom<&usize> for ColIdx {
 
     fn try_from(item: &usize) -> Result<Self, Self::Error> {
         match item {
-            0 => Ok(Self::J0),
-            1 => Ok(Self::J1),
-            2 => Ok(Self::J2),
-            3 => Ok(Self::J3),
-            4 => Ok(Self::J4),
-            5 => Ok(Self::J5),
-            6 => Ok(Self::J6),
-            7 => Ok(Self::J7),
-            8 => Ok(Self::J8),
+            0 => Ok(Self::Col0),
+            1 => Ok(Self::Col1),
+            2 => Ok(Self::Col2),
+            3 => Ok(Self::Col3),
+            4 => Ok(Self::Col4),
+            5 => Ok(Self::Col5),
+            6 => Ok(Self::Col6),
+            7 => Ok(Self::Col7),
+            8 => Ok(Self::Col8),
             _ => Err(()),
         }
     }
@@ -136,15 +136,15 @@ impl TryFrom<usize> for ColIdx {
 impl From<&ColIdx> for u8 {
     fn from(v: &ColIdx) -> u8 {
         match v {
-            ColIdx::J0 => 0,
-            ColIdx::J1 => 1,
-            ColIdx::J2 => 2,
-            ColIdx::J3 => 3,
-            ColIdx::J4 => 4,
-            ColIdx::J5 => 5,
-            ColIdx::J6 => 6,
-            ColIdx::J7 => 7,
-            ColIdx::J8 => 8,
+            ColIdx::Col0 => 0,
+            ColIdx::Col1 => 1,
+            ColIdx::Col2 => 2,
+            ColIdx::Col3 => 3,
+            ColIdx::Col4 => 4,
+            ColIdx::Col5 => 5,
+            ColIdx::Col6 => 6,
+            ColIdx::Col7 => 7,
+            ColIdx::Col8 => 8,
         }
     }
 }

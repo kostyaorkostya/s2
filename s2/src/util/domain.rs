@@ -1,5 +1,5 @@
 use super::Bits9;
-use crate::grid::GridValue;
+use crate::grid::Digit;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Domain(Bits9);
@@ -21,7 +21,7 @@ impl Domain {
         self.0.count_zeros()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = GridValue> + use<> {
+    pub fn iter(&self) -> impl Iterator<Item =Digit> + use<> {
         self.0.iter_zeros().map(move |x| x.try_into().unwrap())
     }
 }

@@ -1,4 +1,4 @@
-use crate::grid::{GridIdx, GridValue, RowIdx, ColIdx};
+use crate::grid::{CellIdx, Digit, RowIdx, ColIdx};
 use itertools::Itertools;
 use std::iter::{repeat, zip};
 use std::ops::{Index, IndexMut};
@@ -34,26 +34,26 @@ impl From<bool> for SudokuStatus {
 }
 
 #[derive(Debug, Default)]
-struct Counter([u8; GridValue::COUNT]);
+struct Counter([u8; Digit::COUNT]);
 
-impl Index<GridValue> for Counter {
+impl Index<Digit> for Counter {
     type Output = u8;
 
-    fn index(&self, grid_value: GridValue) -> &Self::Output {
+    fn index(&self, grid_value: Digit) -> &Self::Output {
         &self.0[usize::from(grid_value)]
     }
 }
 
-impl IndexMut<GridValue> for Counter {
-    fn index_mut(&mut self, grid_value: GridValue) -> &mut Self::Output {
+impl IndexMut<Digit> for Counter {
+    fn index_mut(&mut self, grid_value: Digit) -> &mut Self::Output {
         &mut self.0[usize::from(grid_value)]
     }
 }
 
-impl std::iter::FromIterator<Option<GridValue>> for Counter {
+impl std::iter::FromIterator<Option<Digit>> for Counter {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = Option<GridValue>>,
+        I: IntoIterator<Item = Option<Digit>>,
     {
         let mut counter = Self::new();
         for grid_value in iter {
@@ -86,7 +86,7 @@ impl Counter {
 
 pub fn eval_status<T>(grid: &T) -> Result<SudokuStatus, SudokuStatusError>
 where
-    T: Index<GridIdx, Output = Option<GridValue>>,
+    T: Index<CellIdx, Output = Option<Digit>>,
 {
     let rows = RowIdx::iter()
         .map(|i| {

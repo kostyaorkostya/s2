@@ -1,5 +1,5 @@
 use super::{ReadFormatter, WriteFormatter};
-use crate::grid::{Grid, GridIdx, GridMut, GridValue, RowIdx, ColIdx};
+use crate::grid::{Grid, CellIdx, GridMut, Digit, RowIdx, ColIdx};
 use std::io::{Read, Write};
 use std::slice;
 use strum::EnumCount;
@@ -30,7 +30,7 @@ impl<'a> RowMajorAsciiReadState<'a> {
     }
 
     fn inc(&mut self) {
-        let idx = GridIdx::try_of_row_major(self.row_major_idx).unwrap();
+        let idx = CellIdx::try_of_row_major(self.row_major_idx).unwrap();
         if idx.row < RowIdx::Row8 && idx.col == ColIdx::Col8 {
             self.row_sep_expected = self.formatter.row_sep.is_some();
         };
@@ -64,7 +64,7 @@ impl ReadFormatter for RowMajorAscii {
         let is_empty = |c: u8| c == self.empty_cell;
         let is_row_sep = |c: u8| self.row_sep == Some(c);
         loop {
-            let idx = GridIdx::try_of_row_major(state.row_major_idx).unwrap();
+            let idx = CellIdx::try_of_row_major(state.row_major_idx).unwrap();
             let mut c = 0;
             match reader.read_exact(slice::from_mut(&mut c)) {
                 Err(_) => return Err(()),
@@ -81,7 +81,7 @@ impl ReadFormatter for RowMajorAscii {
                     } else if c.is_ascii_whitespace() {
                         continue;
                     } else if is_cell(c) {
-                        grid[idx] = Some(GridValue::try_from_ascii(c).unwrap());
+                        grid[idx] = Some(Digit::try_from_ascii(c).unwrap());
                         state.inc();
                     } else if is_empty(c) {
                         grid[idx] = None;
@@ -105,8 +105,8 @@ impl WriteFormatter for RowMajorAscii {
         G: Grid + ?Sized,
         W: Write,
     {
-        GridIdx::iter_row_wise().try_fold(0, |res, idx| {
-            let cell = grid[idx].map(|x| x.into_ascii()).unwrap_or(self.empty_cell);
+        CellIdx::iter_row_wise().try_fold(0, |res, idx| {
+            let cell = grid[idx].map(|x| x.as_ascii()).unwrap_or(self.empty_cell);
             let cell = writer.write(slice::from_ref(&cell))?;
             let row_sep = if idx.row != RowIdx::Row8 && idx.col == ColIdx::Col8 {
                 self.row_sep

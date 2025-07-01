@@ -169,23 +169,23 @@ impl From<ColIdx> for usize {
 }
 
 #[derive(
-    Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIterMacro, EnumCountMacro,
 )]
-pub enum GridValue {
+pub enum Digit {
     #[default]
-    V1,
-    V2,
-    V3,
-    V4,
-    V5,
-    V6,
-    V7,
-    V8,
-    V9,
+    D1,
+    D2,
+    D3,
+    D4,
+    D5,
+    D6,
+    D7,
+    D8,
+    D9,
 }
 
-impl GridValue {
-    pub fn into_ascii(&self) -> u8 {
+impl Digit {
+    pub fn as_ascii(&self) -> u8 {
         b'1' + u8::from(self)
     }
 
@@ -196,41 +196,41 @@ impl GridValue {
 
 #[cfg(test)]
 mod grid_value_ascii {
-    use super::GridValue;
+    use super::Digit;
     use strum::IntoEnumIterator;
 
     #[test]
     fn test_roundtrip() {
-        let expected = GridValue::iter().collect::<Vec<_>>();
+        let expected = Digit::iter().collect::<Vec<_>>();
         let actual = expected
             .iter()
-            .map(|x| GridValue::into_ascii(&x))
-            .map(|x| GridValue::try_from_ascii(x).unwrap())
+            .map(|x| Digit::as_ascii(&x))
+            .map(|x| Digit::try_from_ascii(x).unwrap())
             .collect::<Vec<_>>();
         assert_eq!(&expected, &actual);
     }
 }
 
-impl TryFrom<&usize> for GridValue {
+impl TryFrom<&usize> for Digit {
     type Error = ();
 
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
         match v {
-            0 => Ok(Self::V1),
-            1 => Ok(Self::V2),
-            2 => Ok(Self::V3),
-            3 => Ok(Self::V4),
-            4 => Ok(Self::V5),
-            5 => Ok(Self::V6),
-            6 => Ok(Self::V7),
-            7 => Ok(Self::V8),
-            8 => Ok(Self::V9),
+            0 => Ok(Self::D1),
+            1 => Ok(Self::D2),
+            2 => Ok(Self::D3),
+            3 => Ok(Self::D4),
+            4 => Ok(Self::D5),
+            5 => Ok(Self::D6),
+            6 => Ok(Self::D7),
+            7 => Ok(Self::D8),
+            8 => Ok(Self::D9),
             _ => Err(()),
         }
     }
 }
 
-impl TryFrom<usize> for GridValue {
+impl TryFrom<usize> for Digit {
     type Error = ();
 
     fn try_from(v: usize) -> Result<Self, Self::Error> {
@@ -238,7 +238,7 @@ impl TryFrom<usize> for GridValue {
     }
 }
 
-impl TryFrom<&u8> for GridValue {
+impl TryFrom<&u8> for Digit {
     type Error = ();
 
     fn try_from(v: &u8) -> Result<Self, Self::Error> {
@@ -246,7 +246,7 @@ impl TryFrom<&u8> for GridValue {
     }
 }
 
-impl TryFrom<u8> for GridValue {
+impl TryFrom<u8> for Digit {
     type Error = ();
 
     fn try_from(v: u8) -> Result<Self, Self::Error> {
@@ -254,55 +254,55 @@ impl TryFrom<u8> for GridValue {
     }
 }
 
-impl From<&GridValue> for u8 {
-    fn from(v: &GridValue) -> u8 {
+impl From<&Digit> for u8 {
+    fn from(v: &Digit) -> u8 {
         match v {
-            GridValue::V1 => 0,
-            GridValue::V2 => 1,
-            GridValue::V3 => 2,
-            GridValue::V4 => 3,
-            GridValue::V5 => 4,
-            GridValue::V6 => 5,
-            GridValue::V7 => 6,
-            GridValue::V8 => 7,
-            GridValue::V9 => 8,
+            Digit::D1 => 0,
+            Digit::D2 => 1,
+            Digit::D3 => 2,
+            Digit::D4 => 3,
+            Digit::D5 => 4,
+            Digit::D6 => 5,
+            Digit::D7 => 6,
+            Digit::D8 => 7,
+            Digit::D9 => 8,
         }
     }
 }
 
-impl From<GridValue> for u8 {
-    fn from(v: GridValue) -> u8 {
+impl From<Digit> for u8 {
+    fn from(v: Digit) -> u8 {
         (&v).into()
     }
 }
 
-impl From<&GridValue> for usize {
-    fn from(v: &GridValue) -> usize {
+impl From<&Digit> for usize {
+    fn from(v: &Digit) -> usize {
         let v: u8 = v.into();
         v.into()
     }
 }
 
-impl From<GridValue> for usize {
-    fn from(v: GridValue) -> usize {
+impl From<Digit> for usize {
+    fn from(v: Digit) -> usize {
         (&v).into()
     }
 }
 
-impl std::fmt::Display for GridValue {
+impl std::fmt::Display for Digit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x: char = self.into_ascii().into();
+        let x: char = self.as_ascii().into();
         write!(f, "{x}")
     }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct GridIdx {
+pub struct CellIdx {
     pub row: RowIdx,
     pub col: ColIdx,
 }
 
-impl From<&(RowIdx, ColIdx)> for GridIdx {
+impl From<&(RowIdx, ColIdx)> for CellIdx {
     fn from(v: &(RowIdx, ColIdx)) -> Self {
         Self {
             row: v.0.clone(),
@@ -311,13 +311,13 @@ impl From<&(RowIdx, ColIdx)> for GridIdx {
     }
 }
 
-impl From<(RowIdx, ColIdx)> for GridIdx {
+impl From<(RowIdx, ColIdx)> for CellIdx {
     fn from(v: (RowIdx, ColIdx)) -> Self {
         (&v).into()
     }
 }
 
-impl From<(&RowIdx, ColIdx)> for GridIdx {
+impl From<(&RowIdx, ColIdx)> for CellIdx {
     fn from(v: (&RowIdx, ColIdx)) -> Self {
         Self {
             row: v.0.clone(),
@@ -326,7 +326,7 @@ impl From<(&RowIdx, ColIdx)> for GridIdx {
     }
 }
 
-impl From<(RowIdx, &ColIdx)> for GridIdx {
+impl From<(RowIdx, &ColIdx)> for CellIdx {
     fn from(v: (RowIdx, &ColIdx)) -> Self {
         Self {
             row: v.0,
@@ -335,19 +335,19 @@ impl From<(RowIdx, &ColIdx)> for GridIdx {
     }
 }
 
-impl From<&GridIdx> for (RowIdx, ColIdx) {
-    fn from(v: &GridIdx) -> Self {
+impl From<&CellIdx> for (RowIdx, ColIdx) {
+    fn from(v: &CellIdx) -> Self {
         (v.row.clone(), v.col.clone())
     }
 }
 
-impl From<GridIdx> for (RowIdx, ColIdx) {
-    fn from(v: GridIdx) -> Self {
+impl From<CellIdx> for (RowIdx, ColIdx) {
+    fn from(v: CellIdx) -> Self {
         (&v).into()
     }
 }
 
-impl GridIdx {
+impl CellIdx {
     pub const COUNT: usize = RowIdx::COUNT * ColIdx::COUNT;
 
     pub fn row_major(&self) -> usize {
@@ -394,64 +394,64 @@ impl GridIdx {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum GridDiff {
-    Set(GridIdx, GridValue),
-    Unset(GridIdx),
+    Set(CellIdx, Digit),
+    Unset(CellIdx),
 }
 
-pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
-    fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        GridIdx::iter_row_wise().map(|idx| (idx, self[idx]))
+pub trait Grid: Index<CellIdx, Output = Option<Digit>> {
+    fn iter_row_wise(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
+        CellIdx::iter_row_wise().map(|idx| (idx, self[idx]))
     }
 
-    fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        GridIdx::iter_col_wise().map(|idx| (idx, self[idx]))
+    fn iter_col_wise(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
+        CellIdx::iter_col_wise().map(|idx| (idx, self[idx]))
     }
 
-    fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+    fn iter(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
         self.iter_row_wise()
     }
 
-    fn iter_values_row_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
+    fn iter_values_row_wise(&self) -> impl Iterator<Item = Option<Digit>> {
         self.iter_row_wise().map(|(_, x)| x)
     }
 
-    fn iter_values_col_wise(&self) -> impl Iterator<Item = Option<GridValue>> {
+    fn iter_values_col_wise(&self) -> impl Iterator<Item = Option<Digit>> {
         self.iter_col_wise().map(|(_, x)| x)
     }
 
-    fn iter_values(&self) -> impl Iterator<Item = Option<GridValue>> {
+    fn iter_values(&self) -> impl Iterator<Item = Option<Digit>> {
         self.iter_values_row_wise()
     }
 
-    fn iter_set_row_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
+    fn iter_set_row_wise(&self) -> impl Iterator<Item = (CellIdx, Digit)> {
         self.iter_row_wise()
             .filter_map(|(idx, value)| Some((idx, value?)))
     }
 
-    fn iter_set_col_wise(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
+    fn iter_set_col_wise(&self) -> impl Iterator<Item = (CellIdx, Digit)> {
         self.iter_col_wise()
             .filter_map(|(idx, value)| Some((idx, value?)))
     }
 
-    fn iter_set(&self) -> impl Iterator<Item = (GridIdx, GridValue)> {
+    fn iter_set(&self) -> impl Iterator<Item = (CellIdx, Digit)> {
         self.iter_set_row_wise()
     }
 
-    fn iter_unset_row_wise(&self) -> impl Iterator<Item = GridIdx> {
+    fn iter_unset_row_wise(&self) -> impl Iterator<Item =CellIdx> {
         self.iter_row_wise().filter_map(|(idx, value)| match value {
             None => Some(idx),
             Some(_) => None,
         })
     }
 
-    fn iter_unset_col_wise(&self) -> impl Iterator<Item = GridIdx> {
+    fn iter_unset_col_wise(&self) -> impl Iterator<Item =CellIdx> {
         self.iter_col_wise().filter_map(|(idx, value)| match value {
             None => Some(idx),
             Some(_) => None,
         })
     }
 
-    fn iter_unset(&self) -> impl Iterator<Item = GridIdx> {
+    fn iter_unset(&self) -> impl Iterator<Item =CellIdx> {
         self.iter_unset_row_wise()
     }
 
@@ -478,9 +478,9 @@ pub trait Grid: Index<GridIdx, Output = Option<GridValue>> {
     }
 }
 
-pub trait GridMut: Grid + IndexMut<GridIdx, Output = Option<GridValue>> {
+pub trait GridMut: Grid + IndexMut<CellIdx, Output = Option<Digit>> {
     fn clear(&mut self) {
-        self.unset_from_iter(GridIdx::iter_row_wise())
+        self.unset_from_iter(CellIdx::iter_row_wise())
     }
 
     fn apply_diff<T>(&mut self, diff: T)
@@ -497,14 +497,14 @@ pub trait GridMut: Grid + IndexMut<GridIdx, Output = Option<GridValue>> {
 
     fn set_from_iter<I>(&mut self, iter: I)
     where
-        I: Iterator<Item = (GridIdx, GridValue)>,
+        I: Iterator<Item = (CellIdx, Digit)>,
     {
         iter.for_each(|(idx, value)| self[idx] = Some(value))
     }
 
     fn unset_from_iter<I>(&mut self, iter: I)
     where
-        I: Iterator<Item = GridIdx>,
+        I: Iterator<Item =CellIdx>,
     {
         iter.for_each(|idx| self[idx] = None)
     }
@@ -530,7 +530,7 @@ pub trait GridMutWithDefault: GridMut + Default {
 
     fn of_set<I>(iter: I) -> Self
     where
-        I: Iterator<Item = (GridIdx, GridValue)>,
+        I: Iterator<Item = (CellIdx, Digit)>,
     {
         let mut dst: Self = Default::default();
         dst.set_from_iter(iter);
@@ -539,10 +539,10 @@ pub trait GridMutWithDefault: GridMut + Default {
 
     fn from_fn<F>(f: F) -> Self
     where
-        F: Fn(GridIdx) -> Option<GridValue>,
+        F: Fn(CellIdx) -> Option<Digit>,
     {
         let mut dst: Self = Default::default();
-        GridIdx::iter_row_wise().for_each(|idx| dst[idx] = f(idx));
+        CellIdx::iter_row_wise().for_each(|idx| dst[idx] = f(idx));
         dst
     }
 

@@ -2,7 +2,7 @@ use super::{Solver, SolverError};
 use crate::cancellation_flag::CancellationFlag;
 use crate::grid;
 use crate::grid::{
-    ArrGridRowMajor, Grid, GridDiff, GridIdx, GridMut, GridMutWithDefault, GridValue,
+    ArrGridRowMajor, Grid, GridDiff, CellIdx, GridMut, GridMutWithDefault, Digit,
 };
 use crate::permutator::Permutator;
 use crate::util::{BoolMatrix9x9, Domain, SliceGroupByIterator};
@@ -37,11 +37,11 @@ impl Constraints {
         t
     }
 
-    fn constraint_indices(idx: GridIdx) -> (u8, u8, u8) {
+    fn constraint_indices(idx: CellIdx) -> (u8, u8, u8) {
         (idx.row.into(), idx.col.into(), idx.box_() as u8)
     }
 
-    fn set(&mut self, idx: GridIdx, value: GridValue) {
+    fn set(&mut self, idx: CellIdx, value: Digit) {
         let (i, j, box_) = Self::constraint_indices(idx);
         let value: u8 = value.into();
         self.rows.set((i, value));
@@ -51,14 +51,14 @@ impl Constraints {
 
     fn set_many<I>(&mut self, iter: I)
     where
-        I: Iterator<Item = (GridIdx, GridValue)>,
+        I: Iterator<Item = (CellIdx, Digit)>,
     {
         for (idx, elt) in iter {
             self.set(idx, elt)
         }
     }
 
-    fn unset(&mut self, idx: GridIdx, value: GridValue) {
+    fn unset(&mut self, idx: CellIdx, value: Digit) {
         let (i, j, box_) = Self::constraint_indices(idx);
         let value: u8 = value.into();
         self.rows.unset((i, value));
@@ -68,14 +68,14 @@ impl Constraints {
 
     fn unset_many<I>(&mut self, iter: I)
     where
-        I: Iterator<Item = (GridIdx, GridValue)>,
+        I: Iterator<Item = (CellIdx, Digit)>,
     {
         for (idx, elt) in iter {
             self.unset(idx, elt)
         }
     }
 
-    fn domain(&self, idx: GridIdx) -> Domain {
+    fn domain(&self, idx: CellIdx) -> Domain {
         let (i, j, box_) = Self::constraint_indices(idx);
         (self.rows.row(i) | self.cols.row(j) | self.boxes.row(box_)).into()
     }
@@ -83,15 +83,15 @@ impl Constraints {
 
 #[derive(Debug)]
 struct EmptyCellsByDomainSize {
-    len: [u8; GridValue::COUNT + 1],
-    elts: [[GridIdx; GridIdx::COUNT]; GridValue::COUNT + 1],
+    len: [u8; Digit::COUNT + 1],
+    elts: [[CellIdx; CellIdx::COUNT]; Digit::COUNT + 1],
 }
 
 impl Default for EmptyCellsByDomainSize {
     fn default() -> Self {
         Self {
-            len: [0; GridValue::COUNT + 1],
-            elts: [[GridIdx::default(); GridIdx::COUNT]; GridValue::COUNT + 1],
+            len: [0; Digit::COUNT + 1],
+            elts: [[CellIdx::default(); CellIdx::COUNT]; Digit::COUNT + 1],
         }
     }
 }
@@ -103,7 +103,7 @@ impl EmptyCellsByDomainSize {
 
     fn init<I>(&mut self, iter: I)
     where
-        I: Iterator<Item = (GridIdx, u8)>,
+        I: Iterator<Item = (CellIdx, u8)>,
     {
         self.clear();
         iter.for_each(|(idx, domain_size)| {
@@ -114,7 +114,7 @@ impl EmptyCellsByDomainSize {
         })
     }
 
-    fn iter(&self) -> impl Iterator<Item = &GridIdx> + '_ {
+    fn iter(&self) -> impl Iterator<Item = &CellIdx> + '_ {
         zip(self.len.iter(), self.elts.iter())
             .flat_map(|(len, elts)| elts[..(*len as usize)].iter())
     }
@@ -122,9 +122,9 @@ impl EmptyCellsByDomainSize {
 
 #[derive(Debug, Default)]
 struct GroupedByUnit {
-    rows: [(u8, [(Domain, GridIdx); grid::DIM]); grid::DIM],
-    cols: [(u8, [(Domain, GridIdx); grid::DIM]); grid::DIM],
-    boxes: [(u8, [(Domain, GridIdx); grid::DIM]); grid::DIM],
+    rows: [(u8, [(Domain, CellIdx); grid::DIM]); grid::DIM],
+    cols: [(u8, [(Domain, CellIdx); grid::DIM]); grid::DIM],
+    boxes: [(u8, [(Domain, CellIdx); grid::DIM]); grid::DIM],
 }
 
 impl GroupedByUnit {
@@ -136,17 +136,17 @@ impl GroupedByUnit {
 
     fn init<I>(&mut self, iter: I)
     where
-        I: Iterator<Item = (GridIdx, Domain)>,
+        I: Iterator<Item = (CellIdx, Domain)>,
     {
         self.clear();
         iter.for_each(|(idx, domain)| {
-            let row: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.rows[usize::from(idx.row)];
+            let row: &mut (u8, [(Domain, CellIdx); grid::DIM]) = &mut self.rows[usize::from(idx.row)];
             row.1[row.0 as usize] = (domain, idx);
             row.0 += 1;
-            let col: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.cols[usize::from(idx.col)];
+            let col: &mut (u8, [(Domain, CellIdx); grid::DIM]) = &mut self.cols[usize::from(idx.col)];
             col.1[col.0 as usize] = (domain, idx);
             col.0 += 1;
-            let box_: &mut (u8, [(Domain, GridIdx); grid::DIM]) = &mut self.boxes[idx.box_()];
+            let box_: &mut (u8, [(Domain, CellIdx); grid::DIM]) = &mut self.boxes[idx.box_()];
             box_.1[box_.0 as usize] = (domain, idx);
             box_.0 += 1;
         });
@@ -158,13 +158,13 @@ impl GroupedByUnit {
             .for_each(|unit| unit.1[..(unit.0 as usize)].sort())
     }
 
-    fn iter_equal_domains(&self) -> impl Iterator<Item = &[(Domain, GridIdx)]> {
+    fn iter_equal_domains(&self) -> impl Iterator<Item = &[(Domain, CellIdx)]> {
         self.rows
             .iter()
             .chain(self.cols.iter())
             .chain(self.cols.iter())
             .flat_map(|unit| {
-                SliceGroupByIterator::<(Domain, GridIdx), _>::new(
+                SliceGroupByIterator::<(Domain, CellIdx), _>::new(
                     &unit.1[..(unit.0 as usize)],
                     |lhs, rhs| lhs.0 == rhs.0,
                 )
@@ -177,7 +177,7 @@ struct StackFrame {
     count: u64, // TODO(kostya): remove it
     empty_cells: EmptyCellsByDomainSize,
     grouped_by_unit: GroupedByUnit,
-    permutator: Permutator<5, GridValue>,
+    permutator: Permutator<5, Digit>,
 }
 
 impl StackFrame {
@@ -187,7 +187,7 @@ impl StackFrame {
     }
 }
 
-const SOLVER_RECURSIVE_DEPTH: usize = GridIdx::COUNT + 1;
+const SOLVER_RECURSIVE_DEPTH: usize = CellIdx::COUNT + 1;
 
 #[derive(Debug)]
 struct Stack([StackFrame; SOLVER_RECURSIVE_DEPTH]);
@@ -230,11 +230,11 @@ impl<'caller> StackTail<'caller> {
 }
 
 #[derive(Debug)]
-struct Diff([(GridIdx, GridValue); GridIdx::COUNT]);
+struct Diff([(CellIdx, Digit); CellIdx::COUNT]);
 
 impl Default for Diff {
     fn default() -> Self {
-        Self([(GridIdx::default(), GridValue::default()); GridIdx::COUNT])
+        Self([(CellIdx::default(), Digit::default()); CellIdx::COUNT])
     }
 }
 
@@ -246,10 +246,10 @@ impl Diff {
     }
 }
 
-struct DiffTail<'a>(&'a mut [(GridIdx, GridValue)]);
+struct DiffTail<'a>(&'a mut [(CellIdx, Digit)]);
 
-impl<'a> From<&'a mut [(GridIdx, GridValue)]> for DiffTail<'a> {
-    fn from(slice: &'a mut [(GridIdx, GridValue)]) -> Self {
+impl<'a> From<&'a mut [(CellIdx, Digit)]> for DiffTail<'a> {
+    fn from(slice: &'a mut [(CellIdx, Digit)]) -> Self {
         Self(slice)
     }
 }
@@ -263,7 +263,7 @@ impl<'a> From<&'a mut Diff> for DiffTail<'a> {
 impl<'caller> DiffTail<'caller> {
     fn push<I>(&mut self, iter: I) -> usize
     where
-        I: Iterator<Item = (GridIdx, GridValue)>,
+        I: Iterator<Item = (CellIdx, Digit)>,
     {
         let mut cnt = 0;
         for (mut_elt, elt) in zip(self.0.iter_mut(), iter) {
@@ -281,7 +281,7 @@ impl<'caller> DiffTail<'caller> {
         f: F,
     ) -> Result<usize, SolverError>
     where
-        I: Iterator<Item = (GridIdx, GridValue)>,
+        I: Iterator<Item = (CellIdx, Digit)>,
         G: GridMut,
         F: FnOnce(&mut G, &mut Constraints, &mut DiffTail<'_>) -> Result<usize, SolverError>,
     {
@@ -365,7 +365,7 @@ fn solve_inner<const RATE: u64, I, C, G>(
     diff_tail: &mut DiffTail<'_>,
 ) -> Result<usize, SolverError>
 where
-    I: Iterator<Item = (GridIdx, GridValue)>,
+    I: Iterator<Item = (CellIdx, Digit)>,
     C: CancellationFlag,
     G: GridMut,
 {

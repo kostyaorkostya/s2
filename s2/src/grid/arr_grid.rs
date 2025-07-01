@@ -1,16 +1,16 @@
-use super::{GridIdx, GridValue};
+use super::{CellIdx, Digit};
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Copy)]
-pub struct ArrGrid<const ROW_MAJOR: bool>([Option<GridValue>; GridIdx::COUNT]);
+pub struct ArrGrid<const ROW_MAJOR: bool>([Option<Digit>; CellIdx::COUNT]);
 
 impl<const ROW_MAJOR: bool> ArrGrid<ROW_MAJOR> {
     pub fn new() -> Self {
         Default::default()
     }
 
-    fn to_inner_idx(idx: GridIdx) -> usize {
+    fn to_inner_idx(idx: CellIdx) -> usize {
         if ROW_MAJOR {
             idx.row_major()
         } else {
@@ -21,54 +21,54 @@ impl<const ROW_MAJOR: bool> ArrGrid<ROW_MAJOR> {
 
 impl<const ROW_MAJOR: bool> Default for ArrGrid<ROW_MAJOR> {
     fn default() -> Self {
-        Self([None; GridIdx::COUNT])
+        Self([None; CellIdx::COUNT])
     }
 }
 
-impl<const ROW_MAJOR: bool> Index<GridIdx> for ArrGrid<ROW_MAJOR> {
-    type Output = Option<GridValue>;
+impl<const ROW_MAJOR: bool> Index<CellIdx> for ArrGrid<ROW_MAJOR> {
+    type Output = Option<Digit>;
 
-    fn index(&self, idx: GridIdx) -> &Self::Output {
+    fn index(&self, idx: CellIdx) -> &Self::Output {
         &self.0[Self::to_inner_idx(idx)]
     }
 }
 
-impl<const ROW_MAJOR: bool> IndexMut<GridIdx> for ArrGrid<ROW_MAJOR> {
-    fn index_mut(&mut self, idx: GridIdx) -> &mut Self::Output {
+impl<const ROW_MAJOR: bool> IndexMut<CellIdx> for ArrGrid<ROW_MAJOR> {
+    fn index_mut(&mut self, idx: CellIdx) -> &mut Self::Output {
         &mut self.0[Self::to_inner_idx(idx)]
     }
 }
 
 impl super::Grid for ArrGrid<true> {
-    fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+    fn iter_row_wise(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
         self.0
             .iter()
             .enumerate()
-            .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
+            .map(|(idx, value)| (CellIdx::try_of_row_major(idx).unwrap(), value.clone()))
     }
 
-    fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        GridIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
+    fn iter_col_wise(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
+        CellIdx::iter_col_wise().map(|idx| (idx, self[idx].clone()))
     }
 
-    fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+    fn iter(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
         self.iter_row_wise()
     }
 }
 
 impl super::Grid for ArrGrid<false> {
-    fn iter_row_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
-        GridIdx::iter_row_wise().map(|idx| (idx, self[idx].clone()))
+    fn iter_row_wise(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
+        CellIdx::iter_row_wise().map(|idx| (idx, self[idx].clone()))
     }
 
-    fn iter_col_wise(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+    fn iter_col_wise(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
         self.0
             .iter()
             .enumerate()
-            .map(|(idx, value)| (GridIdx::try_of_row_major(idx).unwrap(), value.clone()))
+            .map(|(idx, value)| (CellIdx::try_of_row_major(idx).unwrap(), value.clone()))
     }
 
-    fn iter(&self) -> impl Iterator<Item = (GridIdx, Option<GridValue>)> {
+    fn iter(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {
         self.iter_col_wise()
     }
 }

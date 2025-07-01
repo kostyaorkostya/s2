@@ -50,7 +50,7 @@ impl IndexMut<Digit> for Counter {
     }
 }
 
-impl std::iter::FromIterator<Option<Digit>> for Counter {
+impl FromIterator<Option<Digit>> for Counter {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = Option<Digit>>,

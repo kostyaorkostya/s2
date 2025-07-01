@@ -36,6 +36,7 @@ pub struct IntoRowIdxError;
 impl TryFrom<&usize> for RowIdx {
     type Error = IntoRowIdxError;
 
+    //noinspection DuplicatedCode
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
         match v {
             0 => Ok(Self::Row0),
@@ -118,6 +119,7 @@ pub struct IntoColIdxError;
 impl TryFrom<&usize> for ColIdx {
     type Error = IntoColIdxError;
 
+    //noinspection DuplicatedCode
     fn try_from(item: &usize) -> Result<Self, Self::Error> {
         match item {
             0 => Ok(Self::Col0),
@@ -227,6 +229,7 @@ pub struct IntoDigitError;
 impl TryFrom<&usize> for Digit {
     type Error = IntoDigitError;
 
+    //noinspection DuplicatedCode
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
         match v {
             0 => Ok(Self::D1),

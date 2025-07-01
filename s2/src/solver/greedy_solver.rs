@@ -13,7 +13,7 @@ use strum::EnumCount;
 // TODO(kostya): delete
 const DEBUG_ITER_STATE: bool = false;
 const DEBUG_ITER_STATE_EACH: bool = false;
-const DEBUG_RECUSION_DEPTH: bool = false;
+const DEBUG_RECURSION_DEPTH: bool = false;
 const DEBUG_TOTAL_ITER_COUNT: bool = true;
 
 #[derive(Debug, Default)]
@@ -386,7 +386,7 @@ where
     C: CancellationFlag,
     G: GridMut,
 {
-    if DEBUG_RECUSION_DEPTH {
+    if DEBUG_RECURSION_DEPTH {
         frame.count += 1;
     }
 
@@ -423,8 +423,8 @@ where
         _ => (),
     }
 
-    // Check if cancelled. This must happen __after__ the check for completeness or infisibility,
-    // as calleer relies on it and is using `cancellation_flag` counter to tell if the grid had
+    // Check if cancelled. This must happen __after__ the check for completeness or infiasibility,
+    // as caller relies on it and is using `cancellation_flag` counter to tell if the grid had
     // constraints violation from the start.
     if cancellation_flag.cancelled() {
         return Err(SolverError::Cancelled);
@@ -546,8 +546,8 @@ impl Solver for GreedySolver {
         if DEBUG_TOTAL_ITER_COUNT {
             println!("Total iterations count: {:?}", cancellation_flag.count());
         }
-        if DEBUG_RECUSION_DEPTH {
-            println!("Recusion depth statistics:");
+        if DEBUG_RECURSION_DEPTH {
+            println!("Recursion depth statistics:");
             mem.stack
                 .iter()
                 .enumerate()

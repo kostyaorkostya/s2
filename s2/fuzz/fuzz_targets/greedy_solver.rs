@@ -1,4 +1,5 @@
 #![no_main]
+//noinspection SpellCheckingInspection
 #[macro_use]
 extern crate libfuzzer_sys;
 extern crate s2;
@@ -34,11 +35,9 @@ where
 }
 
 fuzz_target!(|data: &[u8]| {
-    if let Ok(grid) = str::from_utf8(data) {
-        if let Ok(grid) =
+    if let Ok(grid) = str::from_utf8(data) && let Ok(grid) =
             read_from_string::<_, ArrGridRowMajor>(&RowMajorAscii::default(), &grid.trim())
-        {
-            if let Ok(status) = eval_status(&grid) {
+            && let Ok(status) = eval_status(&grid) {
                 match status {
                     SudokuStatus::Complete => (),
                     SudokuStatus::Incomplete => {
@@ -51,6 +50,4 @@ fuzz_target!(|data: &[u8]| {
                     }
                 }
             }
-        }
-    }
 });

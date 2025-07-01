@@ -65,7 +65,7 @@ impl super::Grid for ArrGrid<false> {
         self.0
             .iter()
             .enumerate()
-            .map(|(idx, value)| (CellIdx::try_of_row_major(idx).unwrap(), value.clone()))
+            .map(|(idx, value)| (CellIdx::try_of_row_major(idx).unwrap(), *value))
     }
 
     fn iter(&self) -> impl Iterator<Item = (CellIdx, Option<Digit>)> {

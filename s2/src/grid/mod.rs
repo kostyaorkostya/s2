@@ -5,6 +5,7 @@ use std::iter::zip;
 use std::ops::{Index, IndexMut};
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter as EnumIterMacro};
+use thiserror::Error;
 
 mod arr_grid;
 pub type ArrGridRowMajor = arr_grid::ArrGrid<true>;
@@ -28,8 +29,12 @@ pub enum RowIdx {
     Row8,
 }
 
+#[derive(Debug, Error)]
+#[error("Conversion into rows index fails")]
+pub struct IntoRowIdxError;
+
 impl TryFrom<&usize> for RowIdx {
-    type Error = ();
+    type Error = IntoRowIdxError;
 
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
         match v {
@@ -42,13 +47,13 @@ impl TryFrom<&usize> for RowIdx {
             6 => Ok(Self::Row6),
             7 => Ok(Self::Row7),
             8 => Ok(Self::Row8),
-            _ => Err(()),
+            _ => Err(IntoRowIdxError),
         }
     }
 }
 
 impl TryFrom<usize> for RowIdx {
-    type Error = ();
+    type Error = IntoRowIdxError;
 
     fn try_from(v: usize) -> Result<Self, Self::Error> {
         (&v).try_into()
@@ -91,7 +96,7 @@ impl From<RowIdx> for usize {
 }
 
 #[derive(
-    Debug, Default, Clone, Copy, EnumIterMacro, EnumCountMacro, PartialEq, Eq, PartialOrd, Ord,
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIterMacro, EnumCountMacro,
 )]
 pub enum ColIdx {
     #[default]
@@ -106,8 +111,12 @@ pub enum ColIdx {
     Col8,
 }
 
+#[derive(Debug, Error)]
+#[error("Conversion into column index fails")]
+pub struct IntoColIdxError;
+
 impl TryFrom<&usize> for ColIdx {
-    type Error = ();
+    type Error = IntoColIdxError;
 
     fn try_from(item: &usize) -> Result<Self, Self::Error> {
         match item {
@@ -120,13 +129,13 @@ impl TryFrom<&usize> for ColIdx {
             6 => Ok(Self::Col6),
             7 => Ok(Self::Col7),
             8 => Ok(Self::Col8),
-            _ => Err(()),
+            _ => Err(IntoColIdxError),
         }
     }
 }
 
 impl TryFrom<usize> for ColIdx {
-    type Error = ();
+    type Error = IntoColIdxError;
 
     fn try_from(v: usize) -> Result<Self, Self::Error> {
         (&v).try_into()
@@ -189,8 +198,8 @@ impl Digit {
         b'1' + u8::from(self)
     }
 
-    pub fn try_from_ascii(ascii: u8) -> Result<Self, ()> {
-        ascii.checked_sub(b'1').ok_or(())?.try_into()
+    pub fn try_from_ascii(ascii: u8) -> Result<Self, IntoDigitError> {
+        ascii.checked_sub(b'1').ok_or(IntoDigitError)?.try_into()
     }
 }
 
@@ -211,8 +220,12 @@ mod grid_value_ascii {
     }
 }
 
+#[derive(Debug, Error)]
+#[error("Conversion into digit fails")]
+pub struct IntoDigitError;
+
 impl TryFrom<&usize> for Digit {
-    type Error = ();
+    type Error = IntoDigitError;
 
     fn try_from(v: &usize) -> Result<Self, Self::Error> {
         match v {
@@ -225,13 +238,13 @@ impl TryFrom<&usize> for Digit {
             6 => Ok(Self::D7),
             7 => Ok(Self::D8),
             8 => Ok(Self::D9),
-            _ => Err(()),
+            _ => Err(IntoDigitError),
         }
     }
 }
 
 impl TryFrom<usize> for Digit {
-    type Error = ();
+    type Error = IntoDigitError;
 
     fn try_from(v: usize) -> Result<Self, Self::Error> {
         (&v).try_into()
@@ -239,7 +252,7 @@ impl TryFrom<usize> for Digit {
 }
 
 impl TryFrom<&u8> for Digit {
-    type Error = ();
+    type Error = IntoDigitError;
 
     fn try_from(v: &u8) -> Result<Self, Self::Error> {
         (*v as usize).try_into()
@@ -247,7 +260,7 @@ impl TryFrom<&u8> for Digit {
 }
 
 impl TryFrom<u8> for Digit {
-    type Error = ();
+    type Error = IntoDigitError;
 
     fn try_from(v: u8) -> Result<Self, Self::Error> {
         (&v).try_into()
@@ -347,6 +360,14 @@ impl From<CellIdx> for (RowIdx, ColIdx) {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum IntoCellIdxError {
+    #[error("row index")]
+    Row(#[from] IntoRowIdxError),
+    #[error("column index")]
+    Col(#[from] IntoColIdxError),
+}
+
 impl CellIdx {
     pub const COUNT: usize = RowIdx::COUNT * ColIdx::COUNT;
 
@@ -356,7 +377,7 @@ impl CellIdx {
         i * RowIdx::COUNT + j
     }
 
-    pub fn try_of_row_major(idx: usize) -> Result<Self, ()> {
+    pub fn try_of_row_major(idx: usize) -> Result<Self, IntoCellIdxError> {
         let i: RowIdx = (idx / RowIdx::COUNT).try_into()?;
         let j: ColIdx = (idx % ColIdx::COUNT).try_into()?;
         Ok((i, j).into())
@@ -368,7 +389,7 @@ impl CellIdx {
         j * ColIdx::COUNT + i
     }
 
-    pub fn try_of_col_major(idx: usize) -> Result<Self, ()> {
+    pub fn try_of_col_major(idx: usize) -> Result<Self, IntoCellIdxError> {
         let j: ColIdx = (idx / ColIdx::COUNT).try_into()?;
         let i: RowIdx = (idx % RowIdx::COUNT).try_into()?;
         Ok((i, j).into())

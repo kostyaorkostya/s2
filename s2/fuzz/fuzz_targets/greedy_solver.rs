@@ -36,18 +36,13 @@ where
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(grid) = str::from_utf8(data) && let Ok(grid) =
-            read_from_string::<_, ArrGridRowMajor>(&RowMajorAscii::default(), grid.trim())
-            && let Ok(status) = eval_status(&grid) {
-                match status {
-                    SudokuStatus::Complete => (),
-                    SudokuStatus::Incomplete => {
+            read_from_string::<_, ArrGridRowMajor>(&RowMajorAscii::default(), &grid.trim())
+            && let Ok(SudokuStatus::Incomplete) = eval_status(&grid) {
                         match solve_with_timeout(&grid, Duration::from_secs(5)) {
                             Err(SolverError::Cancelled) => panic!("timed out\n{:?}", grid),
                             Err(SolverError::Infeasible) => (),
                             Err(SolverError::ConstraintsViolated) => panic!("unexpected"),
                             Ok(_) => (),
-                        }
-                    }
                 }
             }
 });

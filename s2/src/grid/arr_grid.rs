@@ -10,7 +10,7 @@ impl<const ROW_MAJOR: bool> ArrGrid<ROW_MAJOR> {
         Default::default()
     }
 
-    fn to_inner_idx(idx: CellIdx) -> usize {
+    fn inner_idx(idx: CellIdx) -> usize {
         if ROW_MAJOR {
             idx.row_major()
         } else {
@@ -29,13 +29,13 @@ impl<const ROW_MAJOR: bool> Index<CellIdx> for ArrGrid<ROW_MAJOR> {
     type Output = Option<Digit>;
 
     fn index(&self, idx: CellIdx) -> &Self::Output {
-        &self.0[Self::to_inner_idx(idx)]
+        &self.0[Self::inner_idx(idx)]
     }
 }
 
 impl<const ROW_MAJOR: bool> IndexMut<CellIdx> for ArrGrid<ROW_MAJOR> {
     fn index_mut(&mut self, idx: CellIdx) -> &mut Self::Output {
-        &mut self.0[Self::to_inner_idx(idx)]
+        &mut self.0[Self::inner_idx(idx)]
     }
 }
 

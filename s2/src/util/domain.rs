@@ -21,7 +21,7 @@ impl Domain {
         self.0.count_zeros()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item =Digit> + use<> {
+    pub fn iter(&self) -> impl Iterator<Item = Digit> + use<> {
         self.0.iter_zeros().map(move |x| x.try_into().unwrap())
     }
 }

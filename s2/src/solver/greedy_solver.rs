@@ -476,39 +476,39 @@ where
     };
 
     // Look for hidden sets
-    match frame
-        .grouped_by_unit
-        .iter_units()
-        .filter_map(|unit| {
-            frame.hidden_sets.init(unit.iter().copied());
-            (1u8..=5u8)
-                .filter_map(|hidden_set_size| {
-                    frame
-                        .hidden_sets
-                        .map_first(hidden_set_size, |digits, hidden_set| {
-                            frame.permutator.try_find(
-                                digits.iter(),
-                                |digits| {
-                                    solve_inner(
-                                        zip(hidden_set.iter().copied(), digits.iter().copied()),
-                                        cancellation_flag,
-                                        grid,
-                                        constraints,
-                                        stack,
-                                        diff,
-                                    )
-                                },
-                                SolverError::is_cancelled,
-                            )
-                        })
-                })
-                .next()
-        })
-        .next()
-    {
-        None => (),
-        Some(ret) => return ret,
-    };
+    // match frame
+    //     .grouped_by_unit
+    //     .iter_units()
+    //     .filter_map(|unit| {
+    //         frame.hidden_sets.init(unit.iter().copied());
+    //         (1u8..=5u8)
+    //             .filter_map(|hidden_set_size| {
+    //                 frame
+    //                     .hidden_sets
+    //                     .map_first(hidden_set_size, |digits, hidden_set| {
+    //                         frame.permutator.try_find(
+    //                             digits.iter(),
+    //                             |digits| {
+    //                                 solve_inner(
+    //                                     zip(hidden_set.iter().copied(), digits.iter().copied()),
+    //                                     cancellation_flag,
+    //                                     grid,
+    //                                     constraints,
+    //                                     stack,
+    //                                     diff,
+    //                                 )
+    //                             },
+    //                             SolverError::is_cancelled,
+    //                         )
+    //                     })
+    //             })
+    //             .next()
+    //     })
+    //     .next()
+    // {
+    //     None => (),
+    //     Some(ret) => return ret,
+    // };
 
     frame.empty_cells.init(
         grid.iter_unset()

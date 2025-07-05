@@ -1,5 +1,5 @@
 use bit_iter::BitIter;
-use std::ops::BitOr;
+use std::ops::{BitOr, Not};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Bits9(u16);
@@ -47,5 +47,13 @@ impl BitOr for Bits9 {
 
     fn bitor(self, rhs: Self) -> Self::Output {
         (self.0 | rhs.0).into()
+    }
+}
+
+impl Not for Bits9 {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        (!self.0).into()
     }
 }

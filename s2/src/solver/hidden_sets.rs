@@ -63,8 +63,8 @@ where
         F: for<'a> FnOnce(Domain, &'a [T]) -> R,
     {
         zip(self.elts_per_digit.iter(), self.eq.iter_rows())
-            .filter(|(_, eq)| eq.count_ones() == size)
+            .filter(|(elts, eq)| elts.0 == size && eq.count_ones() == size)
             .next()
-            .map(|(elts, eq)| f(eq.into(), &elts.1[..(elts.0 as usize)]))
+            .map(|(elts, eq)| f((!eq).into(), &elts.1[..(elts.0 as usize)]))
     }
 }

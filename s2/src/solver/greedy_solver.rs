@@ -455,11 +455,11 @@ where
         .map(|with_equal_domain| {
             frame.permutator.try_find(
                 with_equal_domain.first().unwrap().0.iter(),
-                |digits| {
+                |domain| {
                     solve_inner(
                         zip(
                             with_equal_domain.iter().map(|(_, x)| x).copied(),
-                            digits.iter().copied(),
+                            domain.iter().copied(),
                         ),
                         cancellation_flag,
                         grid,
@@ -485,9 +485,9 @@ where
                 .filter_map(|hidden_set_size| {
                     frame
                         .hidden_sets
-                        .map_first(hidden_set_size, |domain, hidden_set| {
+                        .map_first(hidden_set_size, |digits, hidden_set| {
                             frame.permutator.try_find(
-                                domain.iter(),
+                                digits.iter(),
                                 |digits| {
                                     solve_inner(
                                         zip(hidden_set.iter().copied(), digits.iter().copied()),

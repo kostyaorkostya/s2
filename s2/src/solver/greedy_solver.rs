@@ -475,6 +475,7 @@ where
         Some(ret) => return ret,
     };
 
+    // Look for hidden sets
     match frame
         .grouped_by_unit
         .iter_units()

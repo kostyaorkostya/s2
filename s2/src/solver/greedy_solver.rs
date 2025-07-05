@@ -1,9 +1,7 @@
 use super::{Solver, SolverError};
 use crate::cancellation_flag::CancellationFlag;
 use crate::grid;
-use crate::grid::{
-    ArrGridRowMajor, Grid, GridDiff, CellIdx, GridMut, GridMutWithDefault, Digit,
-};
+use crate::grid::{ArrGridRowMajor, CellIdx, Digit, Grid, GridDiff, GridMut, GridMutWithDefault};
 use crate::permutator::Permutator;
 use crate::util::{BoolMatrix9x9, Domain, SliceGroupByIterator};
 use std::array;
@@ -122,16 +120,19 @@ impl EmptyCellsByDomainSize {
 
 #[derive(Debug, Default)]
 struct GroupedByUnit {
-    rows: [(u8, [(Domain, CellIdx); grid::DIM]); grid::DIM],
-    cols: [(u8, [(Domain, CellIdx); grid::DIM]); grid::DIM],
-    boxes: [(u8, [(Domain, CellIdx); grid::DIM]); grid::DIM],
+    rows_lens: [u8; grid::DIM],
+    rows: [[(Domain, CellIdx); grid::DIM]; grid::DIM],
+    cols_lens: [u8; grid::DIM],
+    cols: [[(Domain, CellIdx); grid::DIM]; grid::DIM],
+    boxes_lens: [u8; grid::DIM],
+    boxes: [[(Domain, CellIdx); grid::DIM]; grid::DIM],
 }
 
 impl GroupedByUnit {
     fn clear(&mut self) {
-        self.rows[..].iter_mut().for_each(|(len, _)| *len = 0);
-        self.cols[..].iter_mut().for_each(|(len, _)| *len = 0);
-        self.boxes[..].iter_mut().for_each(|(len, _)| *len = 0);
+        self.rows_lens.fill(0);
+        self.cols_lens.fill(0);
+        self.boxes_lens.fill(0);
     }
 
     fn init<I>(&mut self, iter: I)
@@ -140,32 +141,32 @@ impl GroupedByUnit {
     {
         self.clear();
         iter.for_each(|(idx, domain)| {
-            let row: &mut (u8, [(Domain, CellIdx); grid::DIM]) = &mut self.rows[usize::from(idx.row)];
-            row.1[row.0 as usize] = (domain, idx);
-            row.0 += 1;
-            let col: &mut (u8, [(Domain, CellIdx); grid::DIM]) = &mut self.cols[usize::from(idx.col)];
-            col.1[col.0 as usize] = (domain, idx);
-            col.0 += 1;
-            let box_: &mut (u8, [(Domain, CellIdx); grid::DIM]) = &mut self.boxes[idx.box_()];
-            box_.1[box_.0 as usize] = (domain, idx);
-            box_.0 += 1;
+            let row: usize = idx.row.into();
+            let col: usize = idx.col.into();
+            let box_: usize = idx.box_();
+            self.rows[row][self.rows_lens[row] as usize] = (domain, idx);
+            self.cols[col][self.cols_lens[col] as usize] = (domain, idx);
+            self.boxes[box_][self.boxes_lens[box_] as usize] = (domain, idx);
+            self.rows_lens[row] += 1;
+            self.cols_lens[col] += 1;
+            self.boxes_lens[box_] += 1;
         });
         // TODO(kostya): random shuffle within the set that has the same domain within unit.
-        self.rows
-            .iter_mut()
-            .chain(self.cols.iter_mut())
-            .chain(self.boxes.iter_mut())
-            .for_each(|unit| unit.1[..(unit.0 as usize)].sort())
+        zip(self.rows_lens.iter(), self.rows.iter_mut())
+            .chain(zip(self.cols_lens.iter(), self.cols.iter_mut()))
+            .chain(zip(self.boxes_lens.iter(), self.boxes.iter_mut()))
+            .filter(|(len, _)| **len > 1)
+            .for_each(|(len, unit)| unit[..(*len as usize)].sort_unstable())
     }
 
     fn iter_equal_domains(&self) -> impl Iterator<Item = &[(Domain, CellIdx)]> {
-        self.rows
-            .iter()
-            .chain(self.cols.iter())
-            .chain(self.cols.iter())
-            .flat_map(|unit| {
+        zip(self.rows_lens.iter(), self.rows.iter())
+            .chain(zip(self.cols_lens.iter(), self.cols.iter()))
+            .chain(zip(self.boxes_lens.iter(), self.boxes.iter()))
+            .filter(|(len, _)| **len > 0)
+            .flat_map(|(len, unit)| {
                 SliceGroupByIterator::<(Domain, CellIdx), _>::new(
-                    &unit.1[..(unit.0 as usize)],
+                    &unit[..(*len as usize)],
                     |lhs, rhs| lhs.0 == rhs.0,
                 )
             })
@@ -586,7 +587,8 @@ mod test {
         let complete = ArrGridRowMajor::with_diff(&grid, diff.into_iter());
         assert_eq!(
             &SudokuStatus::Complete,
-            &eval_status(&complete).unwrap_or_else(|err| panic!("{:?\n}{:?}\n{:?}", err,grid, &complete))
+            &eval_status(&complete)
+                .unwrap_or_else(|err| panic!("{:?\n}{:?}\n{:?}", err, grid, &complete))
         );
         Ok(complete)
     }

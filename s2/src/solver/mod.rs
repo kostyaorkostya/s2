@@ -3,6 +3,9 @@ use crate::grid::{Grid, GridDiff};
 use std::iter::FromIterator;
 use thiserror::Error;
 
+mod hidden_sets;
+use hidden_sets::HiddenSets;
+
 mod greedy_solver;
 pub use greedy_solver::GreedySolver;
 

@@ -1,4 +1,4 @@
-use super::{Solver, SolverError};
+use super::{HiddenSets, Solver, SolverError};
 use crate::cancellation_flag::CancellationFlag;
 use crate::grid;
 use crate::grid::{ArrGridRowMajor, CellIdx, Digit, Grid, GridDiff, GridMut, GridMutWithDefault};
@@ -171,6 +171,14 @@ impl GroupedByUnit {
                 )
             })
     }
+
+    fn iter_units(&self) -> impl Iterator<Item = &[(Domain, CellIdx)]> {
+        zip(self.rows_lens.iter(), self.rows.iter())
+            .chain(zip(self.cols_lens.iter(), self.cols.iter()))
+            .chain(zip(self.boxes_lens.iter(), self.boxes.iter()))
+            .filter(|(len, _)| **len > 0)
+            .map(|(len, unit)| &unit[..(*len as usize)])
+    }
 }
 
 #[derive(Debug, Default)]
@@ -179,6 +187,7 @@ struct StackFrame {
     empty_cells: EmptyCellsByDomainSize,
     grouped_by_unit: GroupedByUnit,
     permutator: Permutator<5, Digit>,
+    hidden_sets: HiddenSets<CellIdx>,
 }
 
 impl StackFrame {
@@ -446,11 +455,11 @@ where
         .map(|with_equal_domain| {
             frame.permutator.try_find(
                 with_equal_domain.first().unwrap().0.iter(),
-                |values| {
+                |digits| {
                     solve_inner(
                         zip(
                             with_equal_domain.iter().map(|(_, x)| x).copied(),
-                            values.iter().copied(),
+                            digits.iter().copied(),
                         ),
                         cancellation_flag,
                         grid,
@@ -463,10 +472,42 @@ where
             )
         }) {
         None => (),
-        Some(res) => return res,
+        Some(ret) => return ret,
     };
 
-    // TODO(kostya): look for hidden sets
+    match frame
+        .grouped_by_unit
+        .iter_units()
+        .filter_map(|unit| {
+            frame.hidden_sets.init(unit.iter().copied());
+            (1u8..=5u8)
+                .filter_map(|hidden_set_size| {
+                    frame
+                        .hidden_sets
+                        .map_first(hidden_set_size, |domain, hidden_set| {
+                            frame.permutator.try_find(
+                                domain.iter(),
+                                |digits| {
+                                    solve_inner(
+                                        zip(hidden_set.iter().copied(), digits.iter().copied()),
+                                        cancellation_flag,
+                                        grid,
+                                        constraints,
+                                        stack,
+                                        diff,
+                                    )
+                                },
+                                SolverError::is_cancelled,
+                            )
+                        })
+                })
+                .next()
+        })
+        .next()
+    {
+        None => (),
+        Some(ret) => return ret,
+    };
 
     frame.empty_cells.init(
         grid.iter_unset()
